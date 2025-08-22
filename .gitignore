@@ -1,0 +1,18 @@
+# Go
+bin/
+*.exe
+*.test
+*.out
+
+# Node.js
+node_modules/
+npm-debug.log*
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+testrunner-*/
+testrunner-*.log

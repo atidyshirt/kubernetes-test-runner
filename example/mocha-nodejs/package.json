@@ -1,0 +1,40 @@
+{
+  "name": "mocha-nodejs-testrunner-example",
+  "version": "1.0.0",
+  "description": "Example Node.js application demonstrating testrunner integration with Mocha hooks",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "mocha test/**/*.spec.js --timeout 300000",
+    "test:watch": "mocha test/**/*.spec.js --watch --timeout 300000",
+    "docker:build": "docker build -t mocha-nodejs-example .",
+    "docker:run": "docker run -p 3000:3000 mocha-nodejs-example"
+  },
+  "keywords": [
+    "kubernetes",
+    "testrunner",
+    "mocha",
+    "express",
+    "integration-testing",
+    "mirrord"
+  ],
+  "author": "TestRunner Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "mocha": "^10.2.0",
+    "chai": "^4.3.7",
+    "chai-http": "^4.3.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
