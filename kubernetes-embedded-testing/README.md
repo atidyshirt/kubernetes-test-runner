@@ -1,79 +1,139 @@
 # ket - Kubernetes Embedded Testing
 
-`ket` is a lightweight testing framework that runs your tests inside Kubernetes pods with traffic interception capabilities.
+A Go-based tool for running integration tests in Kubernetes with traffic interception capabilities.
 
-## Quick Start
+## Overview
+
+`ket` creates isolated test environments in Kubernetes, mounts your source code, and executes tests with optional traffic interception via mirrord.
+
+## Features
+
+- **Isolated Testing**: Unique namespace per test run
+- **HostPath Mounting**: Direct source code access (Kind-optimized)
+- **Mirrord Integration**: Optional traffic interception
+- **Automatic Cleanup**: Resources cleaned up after completion
+- **Multi-language Support**: Node.js, Go, Python, etc.
+
+## Installation
 
 ```bash
-# Build the binary
+# Build from source
 make build
 
-# Run tests against a pod
-./bin/ket -target-pod my-app -test-command "npm test" -proc "npm start"
+# Install dependencies
+go mod download
+
+# Run tests
+make test
 ```
 
 ## Usage
 
-### Launch Mode (Default)
-```bash
-ket -target-pod <pod-name> -test-command <test-command> -proc <process-to-test>
-```
-
-**Required Flags:**
-- `-target-pod`: Name of the pod to test against
-- `-test-command`: Command to run tests (e.g., "npm test", "go test ./...")
-- `-proc`: Process to test (e.g., "npm start", "go run main.go")
-
-**Optional Flags:**
-- `-target-namespace`: Target namespace (default: "default")
-- `-project-root`: Project directory (default: ".")
-- `-image`: Runner image (default: "node:18-alpine")
-- `-debug`: Enable debug logging
-- `-keep-namespace`: Keep test namespace after completion
-
-### Examples
+### Basic Test Execution
 
 ```bash
-# Test a Node.js app
-ket -target-pod express-server -test-command "npm test" -proc "npm start"
-
-# Test a Go app
-ket -target-pod go-app -test-command "go test ./..." -proc "go run main.go"
-
-# Keep namespace for debugging
-ket -target-pod my-app -test-command "npm test" -proc "npm start" -keep-namespace
+ket launch \
+  --target-pod my-app \
+  --target-namespace default \
+  --test-command "npm test" \
+  --image node:18-alpine
 ```
 
-## How It Works
-
-1. **Creates isolated namespace** with UUID for test isolation
-2. **Mounts your source code** into a test pod
-3. **Intercepts traffic** from the target pod using mirrord
-4. **Runs your tests** in the Kubernetes environment
-5. **Streams results** to stdout in real-time
-6. **Cleans up** automatically (unless `-keep-namespace` is used)
-
-## Architecture Support
-
-- **x86_64 Linux**: Full mirrord support with traffic interception
-- **ARM64 Linux**: Graceful fallback without traffic interception
-- **Multi-platform**: Built for both architectures
-
-## Building
+### With Traffic Interception
 
 ```bash
-# Build binary
-make build
-
-# Build Docker image
-make docker-build
-
-# Build for all platforms
-make build-all
+ket launch \
+  --target-pod my-app \
+  --target-namespace default \
+  --test-command "npm test" \
+  --mirrord-process "node server.js" \
+  --steal \
+  --image node:18-alpine
 ```
+
+## Command Reference
+
+### Global Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--debug` | Enable debug logging | `false` |
+| `--image` | Runner image | `node:18-alpine` |
+| `--kind-workspace-path` | Kind workspace path | `/workspace` |
+| `--project-root` | Project root path | `.` |
+
+### Launch Flags
+
+| Flag | Description | Default | Required |
+|------|-------------|---------|----------|
+| `--target-pod` | Target pod to test | - | ✅ |
+| `--target-namespace` | Target namespace | `default` | ✅ |
+| `--test-command` | Test command | - | ✅ |
+| `--mirrord-process` | Process for mirrord | - | ❌ |
+| `--steal` | Enable steal mode | `false` | ❌ |
+| `--keep-namespace` | Keep test namespace | `false` | ❌ |
+| `--backoff-limit` | Job backoff limit | `1` | ❌ |
+| `--active-deadline-seconds` | Job deadline | `1800` | ❌ |
+
+## Architecture
+
+```
+Local → ket launch → Isolated Namespace → Test Job → Results → Cleanup
+```
+
+1. **Namespace Creation**: Unique `ket-<uuid>` namespace
+2. **Job Deployment**: Test runner with source code mounted
+3. **Mirrord Setup**: Optional traffic interception
+4. **Test Execution**: Your test command runs
+5. **Result Collection**: Test output streamed to stdout
+6. **Cleanup**: Namespace and resources removed
+
+## Development
+
+### Project Structure
+
+```
+pkg/
+├── config/     # Configuration and CLI flags
+├── kube/       # Kubernetes operations
+├── launcher/   # Job launch orchestration
+└── logger/     # Structured logging
+
+cmd/
+└── testrunner/ # CLI entry point
+```
+
+### Building
+
+```bash
+make build      # Build binary
+make test       # Run tests
+make lint       # Lint code
+make clean      # Clean artifacts
+```
+
+### Testing
+
+```bash
+# Run all tests
+go test -v ./...
+
+# Run specific package
+go test -v ./pkg/kube
+
+# Run with coverage
+go test -v -coverprofile=coverage.out ./...
+```
+
+## Examples
+
+See the `example/` directory for working examples:
+- **Node.js**: Express server with Mocha tests
+- **Go**: HTTP server with Go tests
 
 ## Requirements
 
 - Go 1.24+
-- Kubernetes cluster (Kind, Minikube, etc.)
+- Kubernetes cluster (Kind recommended)
 - kubectl configured
+- Docker (for building)
