@@ -11,6 +11,7 @@ on:
 env:
   BINARY_NAME: ket
   GO_VERSION: '1.24'
+  GO_PROJECT_DIR: testrunnner
 
 jobs:
   test:
@@ -26,20 +27,23 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install dependencies
+        working-directory: ${{ env.GO_PROJECT_DIR }}
         run: go mod download
 
       - name: Run linter
+        working-directory: ${{ env.GO_PROJECT_DIR }}
         run: |
           go install golang.org/x/lint/golint@latest
           golint ./...
 
       - name: Run unit tests
+        working-directory: ${{ env.GO_PROJECT_DIR }}
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.out
+          file: ${{ env.GO_PROJECT_DIR }}/coverage.out
           flags: unittests
           name: codecov-umbrella
 
@@ -67,6 +71,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Build binary
+        working-directory: ${{ env.GO_PROJECT_DIR }}
         env:
           GOOS: ${{ matrix.os == 'windows-latest' && 'windows' || matrix.os == 'macos-latest' && 'darwin' || 'linux' }}
           GOARCH: ${{ matrix.goarch }}
@@ -86,8 +91,8 @@ jobs:
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.os }}-${{ matrix.goarch }}
           path: |
-            ${{ env.BINARY_NAME }}-${{ matrix.os }}-${{ matrix.goarch }}.*
-            ${{ env.BINARY_NAME }}*
+            ${{ env.GO_PROJECT_DIR }}/${{ env.BINARY_NAME }}-${{ matrix.os }}-${{ matrix.goarch }}.*
+            ${{ env.GO_PROJECT_DIR }}/${{ env.BINARY_NAME }}*
 
   docker:
     name: Build and Push Docker Image
@@ -123,7 +128,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./testrunnner
+          context: ./${{ env.GO_PROJECT_DIR }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
