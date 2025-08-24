@@ -11,9 +11,13 @@ import (
 type LogLevel int
 
 const (
+	// DEBUG represents debug level logging
 	DEBUG LogLevel = iota
+	// INFO represents info level logging
 	INFO
+	// WARN represents warning level logging
 	WARN
+	// ERROR represents error level logging
 	ERROR
 )
 
@@ -37,14 +41,22 @@ func (l LogLevel) String() string {
 type Component string
 
 const (
-	LAUNCHER   Component = "LAUNCHER"
-	KUBE       Component = "KUBE"
-	RUNNER     Component = "RUNNER"
-	MOCHA      Component = "MOCHA"
-	NPM        Component = "NPM"
-	MIRRORD    Component = "MIRRORD"
+	// LAUNCHER represents the launcher component
+	LAUNCHER Component = "LAUNCHER"
+	// KUBE represents the Kubernetes component
+	KUBE Component = "KUBE"
+	// RUNNER represents the test runner component
+	RUNNER Component = "RUNNER"
+	// MOCHA represents the Mocha test framework component
+	MOCHA Component = "MOCHA"
+	// NPM represents the NPM package manager component
+	NPM Component = "NPM"
+	// MIRRORD represents the mirrord traffic interception component
+	MIRRORD Component = "MIRRORD"
+	// TESTRUNNER represents the test runner component
 	TESTRUNNER Component = "TESTRUNNER"
-	POD        Component = "POD"
+	// POD represents the Kubernetes pod component
+	POD Component = "POD"
 )
 
 // Logger provides structured logging with context
@@ -129,19 +141,22 @@ func SetGlobalLevel(level LogLevel) {
 	RunnerLogger.SetLevel(level)
 }
 
-// Convenience functions for quick logging
+// Debug logs a debug message for a component
 func Debug(component Component, format string, args ...interface{}) {
 	New(component).Debug(format, args...)
 }
 
+// Info logs an info message for a component
 func Info(component Component, format string, args ...interface{}) {
 	New(component).Info(format, args...)
 }
 
+// Warn logs a warning message for a component
 func Warn(component Component, format string, args ...interface{}) {
 	New(component).Warn(format, args...)
 }
 
+// Error logs an error message for a component
 func Error(component Component, format string, args ...interface{}) {
 	New(component).Error(format, args...)
 }

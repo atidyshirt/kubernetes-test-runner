@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Config holds the configuration for the ket application
 type Config struct {
 	Mode            string
 	ProjectRoot     string

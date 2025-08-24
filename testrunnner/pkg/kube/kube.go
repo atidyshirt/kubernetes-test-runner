@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// NewClient creates a new Kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	// Try in-cluster config first
 	cfg, err := rest.InClusterConfig()
@@ -37,6 +38,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(cfg)
 }
 
+// CreateNamespace creates a new namespace in Kubernetes
 func CreateNamespace(ctx context.Context, client *kubernetes.Clientset, name string) (string, error) {
 	if name == "" {
 		name = "testrunner"
@@ -50,6 +52,7 @@ func CreateNamespace(ctx context.Context, client *kubernetes.Clientset, name str
 	return name, nil
 }
 
+// DeleteNamespace deletes a namespace from Kubernetes
 func DeleteNamespace(ctx context.Context, client *kubernetes.Clientset, name string) error {
 	return client.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 }
@@ -111,6 +114,7 @@ func CreateConfigMapFromDirectory(ctx context.Context, client *kubernetes.Client
 	return nil
 }
 
+// CreateJob creates a new job in Kubernetes
 func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config) (*batchv1.Job, error) {
 	// Create ConfigMap from local directory
 	projectRoot := cfg.ProjectRoot
@@ -261,6 +265,7 @@ exit $TEST_EXIT_CODE
 	return client.BatchV1().Jobs(cfg.Namespace).Create(ctx, job, metav1.CreateOptions{})
 }
 
+// StreamJobLogs streams logs from a job's pods
 func StreamJobLogs(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("job-name=%s", job.Name),

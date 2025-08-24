@@ -163,11 +163,9 @@ func getProjectName(projectRoot string) string {
 		// If project root is ".", get the current working directory name
 		if cwd, err := os.Getwd(); err == nil {
 			return filepath.Base(cwd)
-		} else {
-			return "project"
 		}
-	} else {
-		// Use the last part of the path as the project name
-		return filepath.Base(projectRoot)
+		return "project"
 	}
+	// Use the last part of the path as the project name
+	return filepath.Base(projectRoot)
 }

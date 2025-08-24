@@ -10,6 +10,7 @@ import (
 	"testrunner/pkg/logger"
 )
 
+// Run executes the launcher with the given configuration
 func Run(cfg config.Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ActiveDeadlineS)*time.Second)
 	defer cancel()

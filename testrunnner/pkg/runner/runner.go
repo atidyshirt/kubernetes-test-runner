@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,11 +10,16 @@ import (
 	"strings"
 	"time"
 
+	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
 	"testrunner/pkg/config"
 	"testrunner/pkg/logger"
 	"testrunner/pkg/report"
 )
 
+// Run executes the runner with the given configuration
 func Run(cfg config.Config) error {
 	fmt.Println("==> Running inside runner pod")
 
@@ -54,10 +60,9 @@ func Run(cfg config.Config) error {
 	if result.Success {
 		fmt.Println("Tests completed successfully")
 		return nil
-	} else {
-		fmt.Println("Tests failed")
-		return fmt.Errorf("test execution failed: %s", result.Details)
 	}
+	fmt.Println("Tests failed")
+	return fmt.Errorf("test execution failed: %s", result.Details)
 }
 
 func executeTestCommand(cfg config.Config) report.Result {
@@ -155,4 +160,29 @@ func getWorkingDir() string {
 		return "unknown"
 	}
 	return wd
+}
+
+func waitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			jobStatus, err := client.BatchV1().Jobs(namespace).Get(ctx, job.Name, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to get job status: %w", err)
+			}
+
+			if jobStatus.Status.Succeeded > 0 {
+				logger.Info(logger.RUNNER, "Job %s completed successfully", job.Name)
+				return nil
+			}
+
+			if jobStatus.Status.Failed > 0 {
+				return fmt.Errorf("job %s failed", job.Name)
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+	}
 }

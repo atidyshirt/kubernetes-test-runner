@@ -2,6 +2,7 @@ package report
 
 import "time"
 
+// Result represents the result of a test execution
 type Result struct {
 	Success     bool          `json:"success"`
 	Details     string        `json:"details"`
