@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -13,14 +14,14 @@ func TestConfig_SetDefaults(t *testing.T) {
 		{
 			name: "empty namespace should generate UUID",
 			config: Config{
-				Namespace: "",
+				TargetNS: "",
 			},
 			expected: "ket-",
 		},
 		{
 			name: "existing namespace should not change",
 			config: Config{
-				Namespace: "existing-namespace",
+				TargetNS: "existing-namespace",
 			},
 			expected: "existing-namespace",
 		},
@@ -29,15 +30,13 @@ func TestConfig_SetDefaults(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.config.SetDefaults()
-
+			if !strings.HasPrefix(tt.config.TargetNS, tt.expected) {
+				t.Errorf("Expected namespace to start with %q, got %q", tt.expected, tt.config.TargetNS)
+			}
 			if tt.expected == "ket-" {
 				// Check that namespace starts with "ket-" and has 8 characters after
-				if len(tt.config.Namespace) != 12 || tt.config.Namespace[:4] != "ket-" {
-					t.Errorf("expected namespace to start with 'ket-' and be 12 chars long, got: %s", tt.config.Namespace)
-				}
-			} else {
-				if tt.config.Namespace != tt.expected {
-					t.Errorf("expected namespace %s, got %s", tt.expected, tt.config.Namespace)
+				if len(tt.config.TargetNS) != 12 || !strings.HasPrefix(tt.config.TargetNS, "ket-") {
+					t.Errorf("Expected namespace to be 'ket-' + 8 chars, got %q", tt.config.TargetNS)
 				}
 			}
 		})

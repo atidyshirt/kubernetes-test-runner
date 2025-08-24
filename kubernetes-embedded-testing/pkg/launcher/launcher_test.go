@@ -8,11 +8,11 @@ import (
 func TestLauncher_ConfigValidation(t *testing.T) {
 	cfg := config.Config{
 		Mode:          "launch",
+		ProjectRoot:   "test-project",
 		TargetPod:     "test-pod",
-		TestCommand:   "npm test",
-		ProcessToTest: "npm start",
-		ProjectRoot:   ".",
-		Namespace:     "test-namespace",
+		TargetNS:      "test-namespace",
+		TestCommand:   "echo 'test'",
+		ProcessToTest: "node server.js",
 	}
 
 	if cfg.Mode != "launch" {

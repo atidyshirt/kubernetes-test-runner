@@ -16,39 +16,34 @@ func TestCreateJob_ConfigMapNaming(t *testing.T) {
 	}{
 		{
 			name:         "simple directory name",
-			projectRoot:  "my-project",
-			expectedName: "ket-source-my-project",
+			projectRoot:  "simple",
+			expectedName: "ket-source-simple",
 		},
 		{
 			name:         "nested directory path",
-			projectRoot:  "path/to/my-project",
-			expectedName: "ket-source-my-project",
+			projectRoot:  "nested/path",
+			expectedName: "ket-source-path",
 		},
 		{
 			name:         "current directory",
 			projectRoot:  ".",
-			expectedName: "ket-source-", // Will be filled by os.Getwd()
+			expectedName: "ket-source-",
 		},
 		{
 			name:         "absolute path",
-			projectRoot:  "/absolute/path/to/project",
-			expectedName: "ket-source-project",
+			projectRoot:  "/absolute/path",
+			expectedName: "ket-source-path",
 		},
 		{
 			name:         "path with special characters",
-			projectRoot:  "my-project-v1.0",
-			expectedName: "ket-source-my-project-v1.0",
+			projectRoot:  "path-with_underscores",
+			expectedName: "ket-source-path-with_underscores",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := config.Config{
-				ProjectRoot: tt.projectRoot,
-				Namespace:   "test-namespace",
-			}
-
-			projectName := getProjectName(cfg.ProjectRoot)
+			projectName := getProjectName(tt.projectRoot)
 			configMapName := "ket-source-" + projectName
 
 			if tt.expectedName == "ket-source-" {
@@ -91,7 +86,7 @@ func TestCreateJob_JobNaming(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config.Config{
 				ProjectRoot: tt.projectRoot,
-				Namespace:   "test-namespace",
+				TargetNS:    "test-namespace",
 			}
 
 			projectName := getProjectName(cfg.ProjectRoot)

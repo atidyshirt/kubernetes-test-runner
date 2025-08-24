@@ -56,7 +56,7 @@ func DeleteNamespace(ctx context.Context, client *kubernetes.Clientset, name str
 }
 
 // CreateJob creates a new job in Kubernetes
-func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config) (*batchv1.Job, error) {
+func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config, namespace string) (*batchv1.Job, error) {
 	hostProjectRoot := filepath.Join(cfg.KindWorkspacePath, cfg.ProjectRoot)
 	if cfg.ProjectRoot == "." {
 		hostProjectRoot = cfg.KindWorkspacePath
@@ -81,7 +81,7 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("ket-%s", projectName),
-			Namespace: cfg.Namespace,
+			Namespace: namespace,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit:          &cfg.BackoffLimit,
@@ -116,7 +116,6 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 set -e
 echo "Starting test execution%s"
 echo "Target pod: %s in namespace: %s"
-%s
 
 # Run the test command
 echo "Running test command: %s"
@@ -128,40 +127,11 @@ exit $TEST_EXIT_CODE
 `,
 									func() string {
 										if cfg.ProcessToTest != "" {
-											return " with mirrord --steal"
+											return " with mirrord"
 										}
 										return ""
 									}(),
 									cfg.TargetPod, cfg.TargetNS,
-									func() string {
-										if cfg.ProcessToTest != "" {
-											return fmt.Sprintf(`echo "Using mirrord --steal to intercept traffic from running pod"
-
-# Check if mirrord is available and working
-if [ -x "/tools/mirrord" ] && /tools/mirrord --version >/dev/null 2>&1; then
-    echo "Mirrord is available, starting in steal mode"
-    # Start mirrord in steal mode to intercept traffic from the target pod
-    /tools/mirrord exec --steal --target-pod %s --target-namespace %s -- %s &
-    MIRRORD_PID=$!
-    echo "Mirrord started with --steal, PID: $MIRRORD_PID"
-    
-    # Wait a moment for mirrord to establish connection
-    sleep 3
-else
-    echo "Warning: Mirrord is not available or not working"
-    echo "Tests will run without traffic interception"
-    echo "This means tests will run against the local Express server, not the target pod"
-fi
-
-# Clean up mirrord if it was started
-if [ ! -z "$MIRRORD_PID" ]; then
-    echo "Cleaning up mirrord process (PID: $MIRRORD_PID)"
-    kill $MIRRORD_PID 2>/dev/null || true
-    wait $MIRRORD_PID 2>/dev/null || true
-fi`, cfg.TargetPod, cfg.TargetNS, cfg.ProcessToTest)
-										}
-										return ""
-									}(),
 									cfg.TestCommand, cfg.TestCommand),
 							},
 							Env: []corev1.EnvVar{
@@ -188,7 +158,7 @@ fi`, cfg.TargetPod, cfg.TargetNS, cfg.ProcessToTest)
 		},
 	}
 
-	return client.BatchV1().Jobs(cfg.Namespace).Create(ctx, job, metav1.CreateOptions{})
+	return client.BatchV1().Jobs(namespace).Create(ctx, job, metav1.CreateOptions{})
 }
 
 // StreamJobLogs streams logs from a job's pods
@@ -355,4 +325,3 @@ func calculateWorkingDirectory(projectRoot, kindWorkspacePath string) (string, e
 
 	return filepath.Join(kindWorkspacePath, projectRoot), nil
 }
-

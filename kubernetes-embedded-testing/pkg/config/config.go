@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 )
 
@@ -9,22 +10,22 @@ import (
 type Config struct {
 	Mode              string
 	ProjectRoot       string
-	TestCommand       string
-	Namespace         string
 	Image             string
+	Debug             bool
 	TargetPod         string
 	TargetNS          string
+	TestCommand       string
+	ProcessToTest     string
+	Steal             bool
 	KeepNamespace     bool
 	BackoffLimit      int32
 	ActiveDeadlineS   int64
-	ProcessToTest     string
-	Debug             bool
 	KindWorkspacePath string
 }
 
 // SetDefaults sets default values for the configuration
 func (cfg *Config) SetDefaults() {
-	if cfg.Namespace == "" {
-		cfg.Namespace = fmt.Sprintf("ket-%s", uuid.New().String()[:8])
+	if cfg.TargetNS == "" {
+		cfg.TargetNS = fmt.Sprintf("ket-%s", uuid.New().String()[:8])
 	}
 }
