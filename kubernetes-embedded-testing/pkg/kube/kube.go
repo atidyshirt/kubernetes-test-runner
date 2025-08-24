@@ -108,9 +108,10 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 					},
 					Containers: []corev1.Container{
 						{
-							Name:    "testrunner",
-							Image:   cfg.Image,
-							Command: []string{"/bin/sh", "-c"},
+							Name:            "testrunner",
+							Image:           cfg.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/bin/sh", "-c"},
 							Args: []string{
 								fmt.Sprintf(`
 set -e
