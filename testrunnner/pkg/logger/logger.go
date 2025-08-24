@@ -76,34 +76,34 @@ func (l *Logger) formatMessage(level LogLevel, format string, args ...interface{
 // Debug logs a debug message
 func (l *Logger) Debug(format string, args ...interface{}) {
 	if l.level <= DEBUG {
-		log.Printf(l.formatMessage(DEBUG, format, args...))
+		log.Print(l.formatMessage(DEBUG, format, args...))
 	}
 }
 
 // Info logs an info message
 func (l *Logger) Info(format string, args ...interface{}) {
 	if l.level <= INFO {
-		log.Printf(l.formatMessage(INFO, format, args...))
+		log.Print(l.formatMessage(INFO, format, args...))
 	}
 }
 
 // Warn logs a warning message
 func (l *Logger) Warn(format string, args ...interface{}) {
 	if l.level <= WARN {
-		log.Printf(l.formatMessage(WARN, format, args...))
+		log.Print(l.formatMessage(WARN, format, args...))
 	}
 }
 
 // Error logs an error message
 func (l *Logger) Error(format string, args ...interface{}) {
 	if l.level <= ERROR {
-		log.Printf(l.formatMessage(ERROR, format, args...))
+		log.Print(l.formatMessage(ERROR, format, args...))
 	}
 }
 
 // Fatal logs a fatal error and exits
 func (l *Logger) Fatal(format string, args ...interface{}) {
-	log.Printf(l.formatMessage(ERROR, format, args...))
+	log.Print(l.formatMessage(ERROR, format, args...))
 	os.Exit(1)
 }
 
