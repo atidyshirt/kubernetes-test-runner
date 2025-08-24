@@ -6,7 +6,6 @@ import (
 )
 
 func TestLauncher_ConfigValidation(t *testing.T) {
-	// Test that launcher can handle valid config
 	cfg := config.Config{
 		Mode:          "launch",
 		TargetPod:     "test-pod",
@@ -16,8 +15,6 @@ func TestLauncher_ConfigValidation(t *testing.T) {
 		Namespace:     "test-namespace",
 	}
 
-	// This is a basic test to ensure the package compiles and can be imported
-	// In a real test environment, we would mock the Kubernetes client and test actual functionality
 	if cfg.Mode != "launch" {
 		t.Error("config mode should be 'launch'")
 	}

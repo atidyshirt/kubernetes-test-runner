@@ -48,12 +48,10 @@ func TestCreateJob_ConfigMapNaming(t *testing.T) {
 				Namespace:   "test-namespace",
 			}
 
-			// Test the ConfigMap name generation logic
 			projectName := getProjectName(cfg.ProjectRoot)
 			configMapName := "ket-source-" + projectName
 
 			if tt.expectedName == "ket-source-" {
-				// For current directory, just check the prefix
 				if !strings.HasPrefix(configMapName, "ket-source-") {
 					t.Errorf("expected ConfigMap name to start with 'ket-source-', got: %s", configMapName)
 				}
@@ -96,12 +94,10 @@ func TestCreateJob_JobNaming(t *testing.T) {
 				Namespace:   "test-namespace",
 			}
 
-			// Test the Job name generation logic
 			projectName := getProjectName(cfg.ProjectRoot)
 			jobName := "ket-" + projectName
 
 			if tt.expectedName == "ket-" {
-				// For current directory, just check the prefix
 				if !strings.HasPrefix(jobName, "ket-") {
 					t.Errorf("expected Job name to start with 'ket-', got: %s", jobName)
 				}
@@ -160,12 +156,10 @@ func TestGetProjectName(t *testing.T) {
 // Helper function to extract project name logic for testing
 func getProjectName(projectRoot string) string {
 	if projectRoot == "." {
-		// If project root is ".", get the current working directory name
 		if cwd, err := os.Getwd(); err == nil {
 			return filepath.Base(cwd)
 		}
 		return "project"
 	}
-	// Use the last part of the path as the project name
 	return filepath.Base(projectRoot)
 }

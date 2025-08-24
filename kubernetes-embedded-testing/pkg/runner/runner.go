@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,11 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	batchv1 "k8s.io/api/batch/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-
 	"testrunner/pkg/config"
 	"testrunner/pkg/logger"
 	"testrunner/pkg/report"
@@ -32,12 +26,10 @@ func Run(cfg config.Config) error {
 		logger.Debug(logger.RUNNER, "  Working directory: %s", getWorkingDir())
 	}
 
-	// Check if we're in the right directory
 	if err := os.Chdir("/workspace"); err != nil {
 		return fmt.Errorf("failed to change to workspace directory: %w", err)
 	}
 
-	// List files in workspace for debugging
 	if cfg.Debug {
 		files, err := os.ReadDir(".")
 		if err == nil {
@@ -48,15 +40,11 @@ func Run(cfg config.Config) error {
 		}
 	}
 
-	// Execute the test command
 	result := executeTestCommand(cfg)
-
-	// Write JSON report
 	if err := writeReport(result); err != nil {
 		logger.Warn(logger.RUNNER, "Failed to write report: %v", err)
 	}
 
-	// Exit with appropriate code
 	if result.Success {
 		fmt.Println("Tests completed successfully")
 		return nil
@@ -68,7 +56,6 @@ func Run(cfg config.Config) error {
 func executeTestCommand(cfg config.Config) report.Result {
 	startTime := time.Now()
 
-	// Split the test command into parts
 	parts := strings.Fields(cfg.TestCommand)
 	if len(parts) == 0 {
 		return report.Result{
@@ -83,7 +70,6 @@ func executeTestCommand(cfg config.Config) report.Result {
 		}
 	}
 
-	// Create command
 	cmd := exec.Command(parts[0], parts[1:]...)
 	cmd.Dir = "/workspace"
 	cmd.Stdout = os.Stdout
@@ -94,7 +80,6 @@ func executeTestCommand(cfg config.Config) report.Result {
 		"PROCESS_TO_TEST="+cfg.ProcessToTest,
 	)
 
-	// Execute command
 	logger.Info(logger.RUNNER, "Executing test command: %s", cfg.TestCommand)
 	logger.Info(logger.RUNNER, "Working directory: %s", cmd.Dir)
 
@@ -130,13 +115,11 @@ func executeTestCommand(cfg config.Config) report.Result {
 }
 
 func writeReport(result report.Result) error {
-	// Ensure report directory exists
 	reportDir := "/reports"
 	if err := os.MkdirAll(reportDir, 0755); err != nil {
 		return fmt.Errorf("failed to create report directory: %w", err)
 	}
 
-	// Write JSON report
 	reportPath := filepath.Join(reportDir, "test-results.json")
 	f, err := os.Create(reportPath)
 	if err != nil {
@@ -160,29 +143,4 @@ func getWorkingDir() string {
 		return "unknown"
 	}
 	return wd
-}
-
-func waitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			jobStatus, err := client.BatchV1().Jobs(namespace).Get(ctx, job.Name, metav1.GetOptions{})
-			if err != nil {
-				return fmt.Errorf("failed to get job status: %w", err)
-			}
-
-			if jobStatus.Status.Succeeded > 0 {
-				logger.Info(logger.RUNNER, "Job %s completed successfully", job.Name)
-				return nil
-			}
-
-			if jobStatus.Status.Failed > 0 {
-				return fmt.Errorf("job %s failed", job.Name)
-			}
-
-			time.Sleep(5 * time.Second)
-		}
-	}
 }

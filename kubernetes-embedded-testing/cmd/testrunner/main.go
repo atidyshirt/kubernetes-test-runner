@@ -12,12 +12,10 @@ import (
 )
 
 var (
-	// Global flags
-	projectRoot string
-	image       string
-	debug       bool
-
-	// Launch-specific flags
+	projectRoot       string
+	image             string
+	debug             bool
+	kindWorkspacePath string
 	targetPod       string
 	targetNamespace string
 	testCommand     string
@@ -39,12 +37,11 @@ It supports two main modes:
 - run: Execute tests within a Kubernetes pod (internal use)`,
 	}
 
-	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&projectRoot, "project-root", "r", ".", "Project root path")
 	rootCmd.PersistentFlags().StringVarP(&image, "image", "i", "node:18-alpine", "Runner image")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "v", false, "Enable debug logging")
+	rootCmd.PersistentFlags().StringVarP(&kindWorkspacePath, "kind-workspace-path", "w", "/workspace", "Kind workspace path")
 
-	// Launch command
 	var launchCmd = &cobra.Command{
 		Use:   "launch",
 		Short: "Launch tests in Kubernetes with traffic interception",
@@ -56,22 +53,20 @@ It supports two main modes:
 5. Cleaning up automatically`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Config{
-				Mode:            "launch",
-				ProjectRoot:     projectRoot,
-				Image:           image,
-				Debug:           debug,
-				TargetPod:       targetPod,
-				TargetNS:        targetNamespace,
-				TestCommand:     testCommand,
-				ProcessToTest:   processToTest,
-				KeepNamespace:   keepNamespace,
-				BackoffLimit:    backoffLimit,
-				ActiveDeadlineS: activeDeadline,
+				Mode:              "launch",
+				ProjectRoot:       projectRoot,
+				Image:             image,
+				Debug:             debug,
+				TargetPod:         targetPod,
+				TargetNS:          targetNamespace,
+				TestCommand:       testCommand,
+				ProcessToTest:     processToTest,
+				KeepNamespace:     keepNamespace,
+				BackoffLimit:      backoffLimit,
+				ActiveDeadlineS:   activeDeadline,
+				KindWorkspacePath: kindWorkspacePath,
 			}
-
-			// Set defaults (like namespace generation)
 			cfg.SetDefaults()
-
 			if err := launcher.Run(cfg); err != nil {
 				return fmt.Errorf("launch failed: %w", err)
 			}
@@ -83,21 +78,19 @@ It supports two main modes:
 	launchCmd.Flags().StringVarP(&targetPod, "target-pod", "p", "", "Target pod to test against (required)")
 	launchCmd.Flags().StringVarP(&targetNamespace, "target-namespace", "n", "default", "Target namespace")
 	launchCmd.Flags().StringVarP(&testCommand, "test-command", "t", "", "Test command to execute (required)")
-	launchCmd.Flags().StringVarP(&processToTest, "proc", "c", "", "Process to test against (required)")
+	launchCmd.Flags().StringVarP(&processToTest, "proc", "c", "", "Process to test against (optional, enables traffic interception with mirrord)")
 	launchCmd.Flags().BoolVarP(&keepNamespace, "keep-namespace", "k", false, "Keep test namespace after run")
 	launchCmd.Flags().Int32VarP(&backoffLimit, "backoff-limit", "b", 1, "Job backoff limit")
 	launchCmd.Flags().Int64VarP(&activeDeadline, "active-deadline-seconds", "d", 1800, "Job deadline in seconds")
 
-	// Mark required flags
 	launchCmd.MarkFlagRequired("target-pod")
 	launchCmd.MarkFlagRequired("test-command")
-	launchCmd.MarkFlagRequired("proc")
 
-	// Run command (internal use)
+	// Hide this from help as it's for internal use when running specs in a pod
 	var runCmd = &cobra.Command{
 		Use:    "run",
 		Short:  "Execute tests within Kubernetes pod (internal use)",
-		Hidden: true, // Hide this from help as it's for internal use
+		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Config{
 				Mode:        "run",
@@ -113,10 +106,7 @@ It supports two main modes:
 		},
 	}
 
-	// Add subcommands
 	rootCmd.AddCommand(launchCmd, runCmd)
-
-	// Execute
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

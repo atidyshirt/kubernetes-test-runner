@@ -22,10 +22,8 @@ import (
 
 // NewClient creates a new Kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
-	// Try in-cluster config first
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		// fallback to local kubeconfig
 		kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			clientcmd.NewDefaultClientConfigLoadingRules(),
 			&clientcmd.ConfigOverrides{},
@@ -57,85 +55,27 @@ func DeleteNamespace(ctx context.Context, client *kubernetes.Clientset, name str
 	return client.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 }
 
-// CreateConfigMapFromDirectory creates a ConfigMap from a local directory
-func CreateConfigMapFromDirectory(ctx context.Context, client *kubernetes.Clientset, namespace, name, dirPath string) error {
-	data := make(map[string]string)
-
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories and hidden files
-		if info.IsDir() || strings.HasPrefix(filepath.Base(path), ".") {
-			return nil
-		}
-
-		// Skip node_modules and other common directories
-		relPath, _ := filepath.Rel(dirPath, path)
-		if strings.Contains(relPath, "node_modules") ||
-			strings.Contains(relPath, ".git") ||
-			strings.Contains(relPath, "dist") ||
-			strings.Contains(relPath, "build") {
-			return nil
-		}
-
-		// Read file content
-		content, err := os.ReadFile(path)
-		if err != nil {
-			logger.Warn(logger.KUBE, "Could not read file %s: %v", path, err)
-			return nil
-		}
-
-		// Use relative path as key, but encode it to handle special characters
-		key := strings.ReplaceAll(relPath, "/", "_")
-		data[key] = string(content)
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to walk directory: %w", err)
-	}
-
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Data: data,
-	}
-
-	_, err = client.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to create ConfigMap: %w", err)
-	}
-
-	logger.Info(logger.KUBE, "Created ConfigMap %s with %d files", name, len(data))
-	return nil
-}
-
 // CreateJob creates a new job in Kubernetes
 func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config) (*batchv1.Job, error) {
-	// Create ConfigMap from local directory
-	projectRoot := cfg.ProjectRoot
-
-	// Get the actual directory name for naming purposes
-	var projectName string
-	if projectRoot == "." {
-		// If project root is ".", get the current working directory name
-		if cwd, err := os.Getwd(); err == nil {
-			projectName = filepath.Base(cwd)
-		} else {
-			projectName = "project"
-		}
-	} else {
-		// Use the last part of the path as the project name
-		projectName = filepath.Base(projectRoot)
+	hostProjectRoot := filepath.Join(cfg.KindWorkspacePath, cfg.ProjectRoot)
+	if cfg.ProjectRoot == "." {
+		hostProjectRoot = cfg.KindWorkspacePath
 	}
 
-	configMapName := fmt.Sprintf("ket-source-%s", projectName)
-	if err := CreateConfigMapFromDirectory(ctx, client, cfg.Namespace, configMapName, cfg.ProjectRoot); err != nil {
-		return nil, fmt.Errorf("failed to create ConfigMap: %w", err)
+	workingDir, err := calculateWorkingDirectory(cfg.ProjectRoot, cfg.KindWorkspacePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate working directory: %w", err)
+	}
+
+	logger.Info(logger.KUBE, "Job configuration: hostPath=%s, workingDir=%s, kindWorkspacePath=%s", hostProjectRoot, workingDir, cfg.KindWorkspacePath)
+
+	projectName := "project"
+	if cfg.ProjectRoot == "." {
+		if cwd, err := os.Getwd(); err == nil {
+			projectName = filepath.Base(cwd)
+		}
+	} else {
+		projectName = filepath.Base(cfg.ProjectRoot)
 	}
 
 	job := &batchv1.Job{
@@ -153,43 +93,16 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 						{
 							Name: "source-code",
 							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapName,
-									},
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: hostProjectRoot,
+									Type: &[]corev1.HostPathType{corev1.HostPathDirectory}[0],
 								},
-							},
-						},
-						{
-							Name: "workspace",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 						{
 							Name: "reports",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-					},
-					InitContainers: []corev1.Container{
-						{
-							Name:    "extract-source",
-							Image:   "node:18-alpine",
-							Command: []string{"/bin/sh", "-c"},
-							Args: []string{
-								"cd /workspace && for key in /source/*; do filename=$(basename $key); target_path=$(echo $filename | sed 's/_/\\//g'); mkdir -p $(dirname $target_path) && cp $key $target_path; done && npm ci",
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "source-code",
-									MountPath: "/source",
-								},
-								{
-									Name:      "workspace",
-									MountPath: "/workspace",
-								},
 							},
 						},
 					},
@@ -201,10 +114,28 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 							Args: []string{
 								fmt.Sprintf(`
 set -e
-cd /workspace
-echo "Starting test execution with mirrord --steal"
+echo "Starting test execution%s"
 echo "Target pod: %s in namespace: %s"
-echo "Using mirrord --steal to intercept traffic from running pod"
+%s
+
+# Run the test command
+echo "Running test command: %s"
+eval %s
+TEST_EXIT_CODE=$?
+echo "Test command completed with exit code: $TEST_EXIT_CODE"
+
+exit $TEST_EXIT_CODE
+`,
+									func() string {
+										if cfg.ProcessToTest != "" {
+											return " with mirrord --steal"
+										}
+										return ""
+									}(),
+									cfg.TargetPod, cfg.TargetNS,
+									func() string {
+										if cfg.ProcessToTest != "" {
+											return fmt.Sprintf(`echo "Using mirrord --steal to intercept traffic from running pod"
 
 # Check if mirrord is available and working
 if [ -x "/tools/mirrord" ] && /tools/mirrord --version >/dev/null 2>&1; then
@@ -222,21 +153,16 @@ else
     echo "This means tests will run against the local Express server, not the target pod"
 fi
 
-# Run the test command
-echo "Running test command: %s"
-eval %s
-TEST_EXIT_CODE=$?
-echo "Test command completed with exit code: $TEST_EXIT_CODE"
-
 # Clean up mirrord if it was started
 if [ ! -z "$MIRRORD_PID" ]; then
     echo "Cleaning up mirrord process (PID: $MIRRORD_PID)"
     kill $MIRRORD_PID 2>/dev/null || true
     wait $MIRRORD_PID 2>/dev/null || true
-fi
-
-exit $TEST_EXIT_CODE
-`, cfg.TargetPod, cfg.TargetNS, cfg.TargetPod, cfg.TargetNS, cfg.ProcessToTest, cfg.TestCommand, cfg.TestCommand),
+fi`, cfg.TargetPod, cfg.TargetNS, cfg.ProcessToTest)
+										}
+										return ""
+									}(),
+									cfg.TestCommand, cfg.TestCommand),
 							},
 							Env: []corev1.EnvVar{
 								{Name: "TARGET_NAMESPACE", Value: cfg.TargetNS},
@@ -246,15 +172,15 @@ exit $TEST_EXIT_CODE
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "workspace",
-									MountPath: "/workspace",
+									Name:      "source-code",
+									MountPath: cfg.KindWorkspacePath,
 								},
 								{
 									Name:      "reports",
 									MountPath: "/reports",
 								},
 							},
-							WorkingDir: "/workspace",
+							WorkingDir: workingDir,
 						},
 					},
 				},
@@ -332,7 +258,6 @@ func WaitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job
 
 // CopyTestResults streams test results and logs to stdout
 func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
-	// Get the pod for this job
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("job-name=%s", job.Name),
 	})
@@ -346,10 +271,9 @@ func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *bat
 
 	logger.Info(logger.KUBE, "Streaming test results from pod %s", pod.Name)
 
-	// Stream logs from the testrunner container
 	req := client.CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
 		Container: "testrunner",
-		Follow:    false, // Get all logs since we're copying after completion
+		Follow:    false,
 	})
 	stream, err := req.Stream(ctx)
 	if err != nil {
@@ -357,24 +281,23 @@ func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *bat
 	}
 	defer stream.Close()
 
-	// Copy logs to stdout with prefixes for different log sources
 	buf := make([]byte, 2000)
 	for {
 		n, err := stream.Read(buf)
 		if n > 0 {
-			output := string(buf[:n])
-			// Add prefixes to different types of logs for better identification
-			lines := strings.Split(output, "\n")
+			content := string(buf[:n])
+			lines := strings.Split(content, "\n")
 			for _, line := range lines {
-				if line = strings.TrimSpace(line); line != "" {
-					// Identify and prefix different log sources
-					if strings.Contains(line, "mocha") || strings.Contains(line, "Express Server") || strings.Contains(line, "should") {
-						fmt.Printf("[MOCHA] %s\n", line)
-					} else if strings.Contains(line, "npm") || strings.Contains(line, "Running test command") {
-						fmt.Printf("[NPM] %s\n", line)
-					} else if strings.Contains(line, "mirrord") || strings.Contains(line, "Target pod") {
+				if line != "" {
+					if strings.Contains(line, "[MIRRORD]") {
 						fmt.Printf("[MIRRORD] %s\n", line)
-					} else if strings.Contains(line, "Starting test execution") || strings.Contains(line, "Test command completed") {
+					} else if strings.Contains(line, "[NPM]") {
+						fmt.Printf("[NPM] %s\n", line)
+					} else if strings.Contains(line, "[MOCHA]") {
+						fmt.Printf("[MOCHA] %s\n", line)
+					} else if strings.Contains(line, "[POD]") {
+						fmt.Printf("[POD] %s\n", line)
+					} else if strings.Contains(line, "[TESTRUNNER]") {
 						fmt.Printf("[TESTRUNNER] %s\n", line)
 					} else {
 						fmt.Printf("[POD] %s\n", line)
@@ -386,10 +309,50 @@ func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *bat
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("error reading logs: %w", err)
+			return fmt.Errorf("failed to read pod logs: %w", err)
 		}
 	}
 
 	logger.Info(logger.KUBE, "Test results streamed successfully")
 	return nil
 }
+
+// findRepositoryRoot finds the repository root by looking for a .git directory
+func findRepositoryRoot(startPath string) (string, error) {
+	repoRoot := startPath
+	for {
+		if _, err := os.Stat(filepath.Join(repoRoot, ".git")); err == nil {
+			return repoRoot, nil
+		}
+		parent := filepath.Dir(repoRoot)
+		if parent == repoRoot {
+			return "", fmt.Errorf("could not find repository root")
+		}
+		repoRoot = parent
+	}
+}
+
+// calculateWorkingDirectory calculates the working directory for the container
+func calculateWorkingDirectory(projectRoot, kindWorkspacePath string) (string, error) {
+	if projectRoot == "." {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current working directory: %w", err)
+		}
+
+		repoRoot, err := findRepositoryRoot(cwd)
+		if err != nil {
+			return "", err
+		}
+
+		relPath, err := filepath.Rel(repoRoot, cwd)
+		if err != nil {
+			return "", fmt.Errorf("failed to calculate relative path: %w", err)
+		}
+
+		return filepath.Join(kindWorkspacePath, relPath), nil
+	}
+
+	return filepath.Join(kindWorkspacePath, projectRoot), nil
+}
+
