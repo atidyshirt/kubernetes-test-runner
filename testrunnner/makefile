@@ -1,7 +1,7 @@
 # Build variables
-BINARY_NAME=testrunner
+BINARY_NAME=ket
 BINARY_UNIX=$(BINARY_NAME)_unix
-DOCKER_IMAGE=testrunner:latest
+DOCKER_IMAGE=ket:latest
 GO_FILES=$(shell find . -name "*.go" -type f)
 
 # Go parameters

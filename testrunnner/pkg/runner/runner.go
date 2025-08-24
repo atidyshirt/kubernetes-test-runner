@@ -3,7 +3,6 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"testrunner/pkg/config"
+	"testrunner/pkg/logger"
 	"testrunner/pkg/report"
 )
 
@@ -18,12 +18,12 @@ func Run(cfg config.Config) error {
 	fmt.Println("==> Running inside runner pod")
 
 	if cfg.Debug {
-		log.Printf("Runner configuration:")
-		log.Printf("  Test command: %s", cfg.TestCommand)
-		log.Printf("  Process to test: %s", cfg.ProcessToTest)
-		log.Printf("  Target pod: %s", cfg.TargetPod)
-		log.Printf("  Target namespace: %s", cfg.TargetNS)
-		log.Printf("  Working directory: %s", getWorkingDir())
+		logger.Debug(logger.RUNNER, "Runner configuration:")
+		logger.Debug(logger.RUNNER, "  Test command: %s", cfg.TestCommand)
+		logger.Debug(logger.RUNNER, "  Process to test: %s", cfg.ProcessToTest)
+		logger.Debug(logger.RUNNER, "  Target pod: %s", cfg.TargetPod)
+		logger.Debug(logger.RUNNER, "  Target namespace: %s", cfg.TargetNS)
+		logger.Debug(logger.RUNNER, "  Working directory: %s", getWorkingDir())
 	}
 
 	// Check if we're in the right directory
@@ -35,9 +35,9 @@ func Run(cfg config.Config) error {
 	if cfg.Debug {
 		files, err := os.ReadDir(".")
 		if err == nil {
-			log.Printf("Files in workspace:")
+			logger.Debug(logger.RUNNER, "Files in workspace:")
 			for _, file := range files {
-				log.Printf("  %s", file.Name())
+				logger.Debug(logger.RUNNER, "  %s", file.Name())
 			}
 		}
 	}
@@ -47,7 +47,7 @@ func Run(cfg config.Config) error {
 
 	// Write JSON report
 	if err := writeReport(result); err != nil {
-		log.Printf("Warning: failed to write report: %v", err)
+		logger.Warn(logger.RUNNER, "Failed to write report: %v", err)
 	}
 
 	// Exit with appropriate code
@@ -90,8 +90,8 @@ func executeTestCommand(cfg config.Config) report.Result {
 	)
 
 	// Execute command
-	fmt.Printf("Executing test command: %s\n", cfg.TestCommand)
-	fmt.Printf("Working directory: %s\n", cmd.Dir)
+	logger.Info(logger.RUNNER, "Executing test command: %s", cfg.TestCommand)
+	logger.Info(logger.RUNNER, "Working directory: %s", cmd.Dir)
 
 	err := cmd.Run()
 	endTime := time.Now()
@@ -145,7 +145,7 @@ func writeReport(result report.Result) error {
 		return fmt.Errorf("failed to encode report: %w", err)
 	}
 
-	fmt.Printf("Report written to %s\n", reportPath)
+	logger.Info(logger.RUNNER, "Report written to %s", reportPath)
 	return nil
 }
 

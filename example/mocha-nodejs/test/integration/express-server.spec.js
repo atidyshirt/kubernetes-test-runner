@@ -1,10 +1,10 @@
 const { expect } = require('chai');
 
-describe('Express Server Integration Tests with TestRunner', function() {
+describe('Express Server Integration Tests with ket', function() {
   // Increase timeout for integration tests
   this.timeout(300000); // 5 minutes
   
-  // Since we're running in a Kubernetes pod, we can access the service directly
+  // Since we're running in a Kubernetes pod via ket, we can access the service directly
   // The service DNS name will be available from within the cluster
   const BASE_URL = 'http://express-server-service.default.svc.cluster.local:3000';
   
@@ -83,7 +83,7 @@ describe('Express Server Integration Tests with TestRunner', function() {
     });
   });
   
-  describe('TestRunner Configuration', function() {
+  describe('ket Configuration', function() {
     it('should have correct target pod configuration', function() {
       // This test confirms the integration test ran successfully
       expect(true).to.be.true;

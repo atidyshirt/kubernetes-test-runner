@@ -20,25 +20,25 @@ class TestRunnerIntegration {
   }
 
   /**
-   * Get the path to the testrunner binary
+   * Get the path to the ket binary
    */
   getTestRunnerPath() {
-    // Look for testrunner in common locations
+    // Look for ket in common locations
     const possiblePaths = [
-      path.join(process.cwd(), 'testrunner', 'bin', 'testrunner'),
-      path.join(process.cwd(), '..', 'testrunnner', 'bin', 'testrunner'),
-      path.join(process.cwd(), '..', '..', 'testrunnner', 'bin', 'testrunner'),
-      '/usr/local/bin/testrunner',
-      'testrunner'
+      path.join(process.cwd(), 'testrunnner', 'bin', 'ket'),
+      path.join(process.cwd(), '..', 'testrunnner', 'bin', 'ket'),
+      path.join(process.cwd(), '..', '..', 'testrunnner', 'bin', 'ket'),
+      '/usr/local/bin/ket',
+      'ket'
     ];
 
     for (const testPath of possiblePaths) {
-      if (fs.existsSync(testPath) || this.isExecutable(testPath)) {
+      if (fs.existsSync(testPath)) {
         return testPath;
       }
     }
 
-    throw new Error('Testrunner binary not found. Please build it first with "make build"');
+    throw new Error('ket binary not found. Please build it first with "make build"');
   }
 
   /**
@@ -54,37 +54,39 @@ class TestRunnerIntegration {
   }
 
   /**
-   * Launch the testrunner
+   * Launch the ket
    */
   async launch() {
     if (this.isRunning) {
-      throw new Error('Testrunner is already running');
+      throw new Error('ket is already running');
     }
 
     const testRunnerPath = this.getTestRunnerPath();
     
-    // The TestRunner will create a test pod that:
+    // The ket will create a test pod that:
     // 1. Mounts your source code
-    // 2. Uses mirrord --steal to intercept traffic from the running Express server
-    // 3. Runs tests against the intercepted traffic
+    // 2. Uses mirrord to intercept traffic from the target pod
+    // 3. Runs your test command
+    // 4. Streams results back to stdout
+    // 5. Cleans up automatically
+
     const args = [
-      'launch',
-      '--target-pod', this.options.targetPod,
-      '--target-namespace', this.options.targetNamespace,
-      '--test-command', this.options.testCommand,
-      '--proc', this.options.processToTest,
-      '--project-root', this.options.projectRoot
+      '-target-pod', this.options.targetPod,
+      '-target-namespace', this.options.targetNamespace,
+      '-test-command', this.options.testCommand,
+      '-proc', this.options.processToTest,
+      '-project-root', this.options.projectRoot
     ];
 
-    if (this.options.keepNamespace) {
-      args.push('--keep-namespace');
-    }
-
     if (this.options.debug) {
-      args.push('--debug');
+      args.push('-debug');
     }
 
-    console.log(`Launching testrunner: ${testRunnerPath} ${args.join(' ')}`);
+    if (this.options.keepNamespace) {
+      args.push('-keep-namespace');
+    }
+
+    console.log(`Launching ket: ${testRunnerPath} ${args.join(' ')}`);
     console.log(`Will intercept traffic from running pod: ${this.options.targetPod} in namespace: ${this.options.targetNamespace}`);
 
     return new Promise((resolve, reject) => {
@@ -99,23 +101,23 @@ class TestRunnerIntegration {
       testrunner.stdout.on('data', (data) => {
         const output = data.toString();
         stdout += output;
-        console.log(`[testrunner] ${output.trim()}`);
+        console.log(`[ket] ${output.trim()}`);
       });
 
       testrunner.stderr.on('data', (data) => {
         const output = data.toString();
         stderr += output;
-        console.error(`[testrunner:error] ${output.trim()}`);
+        console.error(`[ket:error] ${output.trim()}`);
       });
 
       testrunner.on('close', (code) => {
         if (code === 0) {
-          console.log('Testrunner completed successfully');
+          console.log('ket completed successfully');
           console.log('Tests ran against intercepted traffic from the running Express server');
           this.isRunning = false;
           resolve({ stdout, stderr, code });
         } else {
-          const error = new Error(`Testrunner failed with exit code ${code}`);
+          const error = new Error(`ket failed with exit code ${code}`);
           error.stdout = stdout;
           error.stderr = stderr;
           error.code = code;
@@ -124,13 +126,15 @@ class TestRunnerIntegration {
       });
 
       testrunner.on('error', (error) => {
-        reject(new Error(`Failed to start testrunner: ${error.message}`));
+        reject(new Error(`Failed to start ket: ${error.message}`));
       });
 
-      // Set timeout
+      // Set timeout for the entire operation
       setTimeout(() => {
-        testrunner.kill('SIGTERM');
-        reject(new Error(`Testrunner timed out after ${this.options.timeout}ms`));
+        if (this.isRunning) {
+          testrunner.kill('SIGTERM');
+          reject(new Error(`ket timed out after ${this.options.timeout}ms`));
+        }
       }, this.options.timeout);
     });
   }
@@ -139,12 +143,9 @@ class TestRunnerIntegration {
    * Clean up resources
    */
   async cleanup() {
-    if (!this.isRunning) {
-      return;
-    }
-
-    console.log('Cleaning up testrunner resources...');
-    this.isRunning = false;
+    console.log('Cleaning up ket resources...');
+    
+    // Add cleanup logic here if needed
     console.log('Cleanup completed');
   }
 
