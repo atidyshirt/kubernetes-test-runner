@@ -24,7 +24,6 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
-	// Create a new, isolated namespace for the test runner
 	testNamespace := fmt.Sprintf("ket-%s", uuid.New().String()[:8])
 	ns, err := kube.CreateNamespace(ctx, client, testNamespace)
 	if err != nil {
@@ -33,17 +32,16 @@ func Run(cfg config.Config) error {
 
 	logger.Info(logger.LAUNCHER, "Test namespace %s created", ns)
 
-	// Create job manager for mirrord process management
 	jobManager := kube.NewJobManager(cfg)
 	defer jobManager.Cleanup()
 
-	// Start mirrord if configured
 	if err := jobManager.StartMirrord(); err != nil {
 		logger.Warn(logger.LAUNCHER, "Failed to start mirrord: %v", err)
 		logger.Info(logger.LAUNCHER, "Continuing without traffic interception")
+	} else {
+		jobManager.StreamMirrordLogs()
 	}
 
-	// Create the job in the test namespace, but target the pod in the original namespace
 	job, err := kube.CreateJob(ctx, client, cfg, ns)
 	if err != nil {
 		return fmt.Errorf("failed to create job: %w", err)

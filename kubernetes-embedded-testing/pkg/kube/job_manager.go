@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"time"
 
@@ -16,6 +17,8 @@ type JobManager struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	cfg            config.Config
+	mirrordStdout  io.ReadCloser
+	mirrordStderr  io.ReadCloser
 }
 
 // NewJobManager creates a new job manager
@@ -28,7 +31,7 @@ func NewJobManager(cfg config.Config) *JobManager {
 // StartMirrord starts the mirrord process if configured
 func (jm *JobManager) StartMirrord() error {
 	if jm.cfg.ProcessToTest == "" {
-		return nil // No mirrord process needed
+		return nil
 	}
 
 	jm.ctx, jm.cancel = context.WithCancel(context.Background())
@@ -42,8 +45,16 @@ func (jm *JobManager) StartMirrord() error {
 	args = append(args, "--", jm.cfg.ProcessToTest)
 
 	jm.mirrordProcess = exec.CommandContext(jm.ctx, "mirrord", args...)
-	jm.mirrordProcess.Stdout = nil
-	jm.mirrordProcess.Stderr = nil
+
+	var err error
+	jm.mirrordStdout, err = jm.mirrordProcess.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+	jm.mirrordStderr, err = jm.mirrordProcess.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
 
 	logger.Info(logger.KUBE, "Starting mirrord with process: %s", jm.cfg.ProcessToTest)
 	logger.Info(logger.KUBE, "Mirrord command: mirrord %v", args)
@@ -52,16 +63,53 @@ func (jm *JobManager) StartMirrord() error {
 		return fmt.Errorf("failed to start mirrord: %w", err)
 	}
 
-	// Give mirrord a moment to start
 	time.Sleep(100 * time.Millisecond)
 
-	// Verify the process is running
 	if jm.mirrordProcess.Process == nil || jm.mirrordProcess.Process.Pid == 0 {
 		return fmt.Errorf("mirrord process failed to start")
 	}
 
 	logger.Info(logger.KUBE, "Mirrord started successfully with PID: %d", jm.mirrordProcess.Process.Pid)
 	return nil
+}
+
+// StreamMirrordLogs streams mirrord stdout and stderr logs
+func (jm *JobManager) StreamMirrordLogs() {
+	if jm.mirrordProcess == nil || jm.mirrordStdout == nil || jm.mirrordStderr == nil {
+		return
+	}
+
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := jm.mirrordStdout.Read(buf)
+			if n > 0 {
+				fmt.Printf("[MIRRORD] %s", string(buf[:n]))
+			}
+			if err != nil {
+				if err != io.EOF {
+					logger.Error(logger.KUBE, "Error reading mirrord stdout: %v", err)
+				}
+				break
+			}
+		}
+	}()
+
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := jm.mirrordStderr.Read(buf)
+			if n > 0 {
+				fmt.Printf("[MIRRORD-ERROR] %s", string(buf[:n]))
+			}
+			if err != nil {
+				if err != io.EOF {
+					logger.Error(logger.KUBE, "Error reading mirrord stderr: %v", err)
+				}
+				break
+			}
+		}
+	}()
 }
 
 // StopMirrord stops the mirrord process
@@ -76,7 +124,6 @@ func (jm *JobManager) StopMirrord() error {
 		jm.cancel()
 	}
 
-	// Give the process a moment to shut down gracefully
 	done := make(chan error, 1)
 	go func() {
 		done <- jm.mirrordProcess.Wait()
