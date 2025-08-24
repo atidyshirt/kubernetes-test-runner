@@ -11,7 +11,7 @@ on:
 env:
   BINARY_NAME: ket
   GO_VERSION: '1.24'
-  GO_PROJECT_DIR: testrunnner
+  GO_PROJECT_DIR: kubernetese-embedded-testing
 
 jobs:
   test:
