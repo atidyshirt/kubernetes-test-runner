@@ -60,8 +60,12 @@ func (jm *JobManager) StartMirrord() error {
 	logger.Info(logger.KUBE, "Mirrord command: mirrord %v", args)
 
 	if err := jm.mirrordProcess.Start(); err != nil {
+		logger.Error(logger.KUBE, "Failed to start mirrord process: %v", err)
 		return fmt.Errorf("failed to start mirrord: %w", err)
 	}
+
+	logger.Info(logger.KUBE, "Mirrord process started, PID: %d", jm.mirrordProcess.Process.Pid)
+	logger.Info(logger.KUBE, "Waiting for mirrord to initialize...")
 
 	time.Sleep(5 * time.Second)
 
@@ -76,35 +80,48 @@ func (jm *JobManager) StartMirrord() error {
 // StreamMirrordLogs streams mirrord stdout and stderr logs
 func (jm *JobManager) StreamMirrordLogs() {
 	if jm.mirrordProcess == nil || jm.mirrordStdout == nil || jm.mirrordStderr == nil {
+		logger.Warn(logger.KUBE, "Cannot stream mirrord logs: process or pipes not available")
 		return
 	}
 
+	logger.Info(logger.KUBE, "Starting to stream mirrord logs...")
+
+	// Stream stdout
 	go func() {
+		logger.Info(logger.KUBE, "Starting mirrord stdout stream")
 		buf := make([]byte, 1024)
 		for {
 			n, err := jm.mirrordStdout.Read(buf)
 			if n > 0 {
+				logger.Info(logger.KUBE, "Mirrord stdout: %s", string(buf[:n]))
 				fmt.Printf("[MIRRORD] %s", string(buf[:n]))
 			}
 			if err != nil {
 				if err != io.EOF {
 					logger.Error(logger.KUBE, "Error reading mirrord stdout: %v", err)
+				} else {
+					logger.Info(logger.KUBE, "Mirrord stdout stream ended")
 				}
 				break
 			}
 		}
 	}()
 
+	// Stream stderr
 	go func() {
+		logger.Info(logger.KUBE, "Starting mirrord stderr stream")
 		buf := make([]byte, 1024)
 		for {
 			n, err := jm.mirrordStderr.Read(buf)
 			if n > 0 {
+				logger.Info(logger.KUBE, "Mirrord stderr: %s", string(buf[:n]))
 				fmt.Printf("[MIRRORD-ERROR] %s", string(buf[:n]))
 			}
 			if err != nil {
 				if err != io.EOF {
 					logger.Error(logger.KUBE, "Error reading mirrord stderr: %v", err)
+				} else {
+					logger.Info(logger.KUBE, "Mirrord stderr stream ended")
 				}
 				break
 			}
