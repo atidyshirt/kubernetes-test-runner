@@ -63,7 +63,7 @@ func (jm *JobManager) StartMirrord() error {
 		return fmt.Errorf("failed to start mirrord: %w", err)
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(5 * time.Second)
 
 	if jm.mirrordProcess.Process == nil || jm.mirrordProcess.Process.Pid == 0 {
 		return fmt.Errorf("mirrord process failed to start")
