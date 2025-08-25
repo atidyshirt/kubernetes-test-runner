@@ -40,7 +40,7 @@ func (jm *JobManager) StartMirrord() error {
 	if jm.cfg.Steal {
 		args = append(args, "--steal")
 	}
-	args = append(args, "--target-pod", jm.cfg.TargetPod)
+	args = append(args, "--target", jm.cfg.TargetPod)
 	args = append(args, "--target-namespace", jm.cfg.TargetNS)
 	args = append(args, "--", jm.cfg.ProcessToTest)
 
