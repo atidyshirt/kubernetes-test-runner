@@ -14,28 +14,24 @@ import (
 )
 
 var (
-	// Global flags
 	projectRoot       string
 	image             string
 	debug             bool
 	kindWorkspacePath string
-	// Launch-specific flags
-	targetPod       string
-	targetNamespace string
-	testCommand     string
-	mirrordProcess  string
-	steal           bool
-	keepNamespace   bool
-	backoffLimit    int32
-	activeDeadline  int64
+	targetPod         string
+	targetNamespace   string
+	testCommand       string
+	mirrordProcess    string
+	steal             bool
+	keepNamespace     bool
+	backoffLimit      int32
+	activeDeadline    int64
 )
 
 func main() {
-	// Create a context that can be cancelled
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Handle signals for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
@@ -69,7 +65,6 @@ It supports the launch mode to deploy tests to Kubernetes and run them with traf
 4. Streaming results back to stdout
 5. Cleaning up automatically`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Check if context was cancelled
 			select {
 			case <-ctx.Done():
 				return fmt.Errorf("operation cancelled")
@@ -99,7 +94,6 @@ It supports the launch mode to deploy tests to Kubernetes and run them with traf
 		},
 	}
 
-	// Launch command flags
 	launchCmd.Flags().StringVarP(&targetPod, "target-pod", "p", "", "Target pod to test against (required)")
 	launchCmd.Flags().StringVarP(&targetNamespace, "target-namespace", "n", "default", "Target namespace")
 	launchCmd.Flags().StringVarP(&testCommand, "test-command", "t", "", "Test command to execute (required)")

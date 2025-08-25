@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Run executes the launcher with the given configuration
 func Run(cfg config.Config) error {
 	ctx := context.Background()
 
@@ -30,15 +29,17 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create test namespace: %w", err)
 	}
 
-	logger.Info(logger.LAUNCHER, "Test namespace %s created", ns)
+	logger.LauncherLogger.Info("Test namespace %s created", ns)
 
 	jobManager := kube.NewJobManager(cfg)
 	defer jobManager.Cleanup()
 
 	if err := jobManager.StartMirrord(); err != nil {
-		logger.Warn(logger.LAUNCHER, "Failed to start mirrord: %v", err)
-		logger.Info(logger.LAUNCHER, "Continuing without traffic interception")
+		logger.LauncherLogger.Warn("Failed to start mirrord: %v", err)
+		logger.LauncherLogger.Info("Continuing without traffic interception")
 	} else {
+		stdoutLog, stderrLog := jobManager.GetMirrordLogFiles()
+		logger.LauncherLogger.Info("Mirrord started successfully. Log files: stdout=%s, stderr=%s", stdoutLog, stderrLog)
 		jobManager.StreamMirrordLogs()
 	}
 
@@ -47,29 +48,29 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create job: %w", err)
 	}
 
-	logger.Info(logger.LAUNCHER, "Job %s created in namespace %s", job.Name, ns)
+	logger.LauncherLogger.Info("Job %s created in namespace %s", job.Name, ns)
 
 	if err := kube.StreamJobLogs(ctx, client, job, ns); err != nil {
-		logger.Warn(logger.LAUNCHER, "Log stream failed: %v", err)
+		logger.LauncherLogger.Warn("Log stream failed: %v", err)
 	}
 
 	if err := kube.WaitForJobCompletion(ctx, client, job, ns); err != nil {
-		logger.Error(logger.LAUNCHER, "Job failed: %v", err)
+		logger.LauncherLogger.Error("Job failed: %v", err)
 	}
 
 	if err := kube.CopyTestResults(ctx, client, job, ns); err != nil {
-		logger.Error(logger.LAUNCHER, "Failed to copy test results: %v", err)
+		logger.LauncherLogger.Error("Failed to copy test results: %v", err)
 	}
 
 	if !cfg.KeepNamespace {
-		logger.Info(logger.LAUNCHER, "Cleaning up test namespace %s", ns)
+		logger.LauncherLogger.Info("Cleaning up test namespace %s", ns)
 		if err := kube.DeleteNamespace(ctx, client, ns); err != nil {
-			logger.Error(logger.LAUNCHER, "Failed to delete test namespace: %v", err)
+			logger.LauncherLogger.Error("Failed to delete test namespace: %v", err)
 		} else {
-			logger.Info(logger.LAUNCHER, "Test namespace %s deleted", ns)
+			logger.LauncherLogger.Info("Test namespace %s deleted", ns)
 		}
 	} else {
-		logger.Info(logger.LAUNCHER, "Keeping test namespace %s as requested", ns)
+		logger.LauncherLogger.Info("Keeping test namespace %s as requested", ns)
 	}
 
 	return nil

@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Config holds the configuration for the ket application
 type Config struct {
 	Mode              string
 	ProjectRoot       string
@@ -23,7 +22,6 @@ type Config struct {
 	KindWorkspacePath string
 }
 
-// SetDefaults sets default values for the configuration
 func (cfg *Config) SetDefaults() {
 	if cfg.TargetNS == "" {
 		cfg.TargetNS = fmt.Sprintf("ket-%s", uuid.New().String()[:8])

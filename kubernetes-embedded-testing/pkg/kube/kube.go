@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// NewClient creates a new Kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -36,7 +35,6 @@ func NewClient() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(cfg)
 }
 
-// CreateNamespace creates a new namespace in Kubernetes
 func CreateNamespace(ctx context.Context, client *kubernetes.Clientset, name string) (string, error) {
 	if name == "" {
 		name = "testrunner"
@@ -50,12 +48,10 @@ func CreateNamespace(ctx context.Context, client *kubernetes.Clientset, name str
 	return name, nil
 }
 
-// DeleteNamespace deletes a namespace from Kubernetes
 func DeleteNamespace(ctx context.Context, client *kubernetes.Clientset, name string) error {
 	return client.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 }
 
-// CreateJob creates a new job in Kubernetes
 func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config, namespace string) (*batchv1.Job, error) {
 	hostProjectRoot := filepath.Join(cfg.KindWorkspacePath, cfg.ProjectRoot)
 	if cfg.ProjectRoot == "." {
@@ -67,7 +63,7 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 		return nil, fmt.Errorf("failed to calculate working directory: %w", err)
 	}
 
-	logger.Info(logger.KUBE, "Job configuration: hostPath=%s, workingDir=%s, kindWorkspacePath=%s", hostProjectRoot, workingDir, cfg.KindWorkspacePath)
+	logger.KubeLogger.Info("Job configuration: hostPath=%s, workingDir=%s, kindWorkspacePath=%s", hostProjectRoot, workingDir, cfg.KindWorkspacePath)
 
 	projectName := "project"
 	if cfg.ProjectRoot == "." {
@@ -162,7 +158,6 @@ exit $TEST_EXIT_CODE
 	return client.BatchV1().Jobs(namespace).Create(ctx, job, metav1.CreateOptions{})
 }
 
-// StreamJobLogs streams logs from a job's pods
 func StreamJobLogs(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("job-name=%s", job.Name),
@@ -197,11 +192,10 @@ func StreamJobLogs(ctx context.Context, client *kubernetes.Clientset, job *batch
 			return err
 		}
 	}
-	logger.Info(logger.KUBE, "Finished streaming logs from %s", pod.Name)
+	logger.KubeLogger.Info("Finished streaming logs from %s", pod.Name)
 	return nil
 }
 
-// WaitForJobCompletion waits for a job to complete and returns the final status
 func WaitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
 	for {
 		select {
@@ -214,7 +208,7 @@ func WaitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job
 			}
 
 			if jobStatus.Status.Succeeded > 0 {
-				logger.Info(logger.KUBE, "Job %s completed successfully", job.Name)
+				logger.KubeLogger.Info("Job %s completed successfully", job.Name)
 				return nil
 			}
 
@@ -227,7 +221,6 @@ func WaitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job
 	}
 }
 
-// CopyTestResults streams test results and logs to stdout
 func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("job-name=%s", job.Name),
@@ -240,7 +233,7 @@ func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *bat
 	}
 	pod := pods.Items[0]
 
-	logger.Info(logger.KUBE, "Streaming test results from pod %s", pod.Name)
+	logger.KubeLogger.Info("Streaming test results from pod %s", pod.Name)
 
 	req := client.CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
 		Container: "testrunner",
@@ -258,23 +251,7 @@ func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *bat
 		if n > 0 {
 			content := string(buf[:n])
 			lines := strings.Split(content, "\n")
-			for _, line := range lines {
-				if line != "" {
-					if strings.Contains(line, "[MIRRORD]") {
-						fmt.Printf("[MIRRORD] %s\n", line)
-					} else if strings.Contains(line, "[NPM]") {
-						fmt.Printf("[NPM] %s\n", line)
-					} else if strings.Contains(line, "[MOCHA]") {
-						fmt.Printf("[MOCHA] %s\n", line)
-					} else if strings.Contains(line, "[POD]") {
-						fmt.Printf("[POD] %s\n", line)
-					} else if strings.Contains(line, "[TESTRUNNER]") {
-						fmt.Printf("[TESTRUNNER] %s\n", line)
-					} else {
-						fmt.Printf("[POD] %s\n", line)
-					}
-				}
-			}
+			logger.StreamPodLogs(lines)
 		}
 		if err == io.EOF {
 			break
@@ -284,11 +261,10 @@ func CopyTestResults(ctx context.Context, client *kubernetes.Clientset, job *bat
 		}
 	}
 
-	logger.Info(logger.KUBE, "Test results streamed successfully")
+	logger.KubeLogger.Info("Test results streamed successfully")
 	return nil
 }
 
-// findRepositoryRoot finds the repository root by looking for a .git directory
 func findRepositoryRoot(startPath string) (string, error) {
 	repoRoot := startPath
 	for {
@@ -303,7 +279,6 @@ func findRepositoryRoot(startPath string) (string, error) {
 	}
 }
 
-// calculateWorkingDirectory calculates the working directory for the container
 func calculateWorkingDirectory(projectRoot, kindWorkspacePath string) (string, error) {
 	if projectRoot == "." {
 		cwd, err := os.Getwd()

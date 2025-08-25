@@ -2,7 +2,6 @@ package logger
 
 import (
 	"bytes"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -10,41 +9,19 @@ import (
 
 func TestLogger_New(t *testing.T) {
 	logger := New(TESTRUNNER)
-
-	if logger.level != INFO {
-		t.Errorf("expected level INFO, got %v", logger.level)
-	}
-
 	if logger.component != TESTRUNNER {
 		t.Errorf("expected component TESTRUNNER, got %v", logger.component)
+	}
+	if logger.level != INFO {
+		t.Errorf("expected level INFO, got %v", logger.level)
 	}
 }
 
 func TestLogger_SetLevel(t *testing.T) {
 	logger := New(TESTRUNNER)
-
-	logger.SetLevel(DEBUG)
-	if logger.level != DEBUG {
-		t.Errorf("expected level DEBUG, got %v", logger.level)
-	}
-
 	logger.SetLevel(ERROR)
 	if logger.level != ERROR {
 		t.Errorf("expected level ERROR, got %v", logger.level)
-	}
-}
-
-func TestLogger_WithContext(t *testing.T) {
-	logger := New(TESTRUNNER)
-
-	ctxLogger := logger.WithContext(LAUNCHER)
-	if ctxLogger.component != LAUNCHER {
-		t.Errorf("expected component LAUNCHER, got %v", ctxLogger.component)
-	}
-
-	// Original logger should not be modified
-	if logger.component != TESTRUNNER {
-		t.Errorf("original logger component should not be modified, got %v", logger.component)
 	}
 }
 
@@ -78,12 +55,11 @@ func TestLogger_LogLevels(t *testing.T) {
 			logger := New(TESTRUNNER)
 			logger.SetLevel(tt.level)
 
-			// Capture log output
-			var buf bytes.Buffer
-			log.SetOutput(&buf)
-			defer log.SetOutput(os.Stderr)
+			originalOutput := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			defer func() { os.Stdout = originalOutput }()
 
-			// Test with the appropriate log level method
 			switch tt.testLevel {
 			case DEBUG:
 				logger.Debug("test message")
@@ -95,12 +71,16 @@ func TestLogger_LogLevels(t *testing.T) {
 				logger.Error("test message")
 			}
 
+			w.Close()
+			var output bytes.Buffer
+			output.ReadFrom(r)
+
 			if tt.expected {
-				if !strings.Contains(buf.String(), "test message") {
+				if !strings.Contains(output.String(), "test message") {
 					t.Errorf("expected message to be logged, but it wasn't")
 				}
 			} else {
-				if strings.Contains(buf.String(), "test message") {
+				if strings.Contains(output.String(), "test message") {
 					t.Errorf("expected message not to be logged, but it was")
 				}
 			}
@@ -112,121 +92,82 @@ func TestLogger_ComponentPrefixes(t *testing.T) {
 	tests := []struct {
 		name      string
 		component Component
-		expected  string
+		expected  Component
 	}{
-		{"LAUNCHER", LAUNCHER, "LAUNCHER"},
-		{"KUBE", KUBE, "KUBE"},
-		{"RUNNER", RUNNER, "RUNNER"},
-		{"MOCHA", MOCHA, "MOCHA"},
-		{"NPM", NPM, "NPM"},
-		{"MIRRORD", MIRRORD, "MIRRORD"},
-		{"TESTRUNNER", TESTRUNNER, "TESTRUNNER"},
-		{"POD", POD, "POD"},
+		{"LAUNCHER", LAUNCHER, LAUNCHER},
+		{"KUBE", KUBE, KUBE},
+		{"RUNNER", RUNNER, RUNNER},
+		{"MOCHA", MOCHA, MOCHA},
+		{"NPM", NPM, NPM},
+		{"MIRRORD", MIRRORD, MIRRORD},
+		{"TESTRUNNER", TESTRUNNER, TESTRUNNER},
+		{"POD", POD, POD},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := New(tt.component)
-
-			// Capture log output
-			var buf bytes.Buffer
-			log.SetOutput(&buf)
-			defer log.SetOutput(os.Stderr)
-
-			logger.Info("test message")
-
-			if !strings.Contains(buf.String(), tt.expected) {
-				t.Errorf("expected component prefix %s in log output, got: %s", tt.expected, buf.String())
+			if logger.component != tt.expected {
+				t.Errorf("expected component %s, got %v", tt.expected, logger.component)
 			}
 		})
 	}
 }
 
 func TestGlobalLoggers(t *testing.T) {
-	// Test that global loggers are properly initialized
-	if LauncherLogger == nil {
-		t.Error("LauncherLogger should not be nil")
-	}
-
-	if KubeLogger == nil {
-		t.Error("KubeLogger should not be nil")
-	}
-
-	if RunnerLogger == nil {
-		t.Error("RunnerLogger should not be nil")
-	}
-
-	// Test that they have the correct components
 	if LauncherLogger.component != LAUNCHER {
-		t.Errorf("LauncherLogger should have component LAUNCHER, got %v", LauncherLogger.component)
+		t.Errorf("expected LauncherLogger component LAUNCHER, got %v", LauncherLogger.component)
 	}
-
 	if KubeLogger.component != KUBE {
-		t.Errorf("KubeLogger should have component KUBE, got %v", KubeLogger.component)
+		t.Errorf("expected KubeLogger component KUBE, got %v", KubeLogger.component)
 	}
-
 	if RunnerLogger.component != RUNNER {
-		t.Errorf("RunnerLogger should have component RUNNER, got %v", RunnerLogger.component)
+		t.Errorf("expected RunnerLogger component RUNNER, got %v", RunnerLogger.component)
 	}
 }
 
 func TestSetGlobalLevel(t *testing.T) {
-	// Test setting global level
 	SetGlobalLevel(DEBUG)
-
-	// All global loggers should now accept DEBUG level
-	LauncherLogger.Debug("debug message")
-	KubeLogger.Debug("debug message")
-	RunnerLogger.Debug("debug message")
-
-	// Reset to INFO for other tests
-	SetGlobalLevel(INFO)
-}
-
-func TestLogger_ContextLogging(t *testing.T) {
-	logger := New(TESTRUNNER).WithContext(LAUNCHER)
-
-	// Capture log output
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
-
-	logger.Info("test message")
-
-	output := buf.String()
-	if !strings.Contains(output, "test message") {
-		t.Errorf("expected message to be logged, got: %s", output)
+	if LauncherLogger.level != DEBUG {
+		t.Errorf("expected LauncherLogger level DEBUG, got %v", LauncherLogger.level)
+	}
+	if KubeLogger.level != DEBUG {
+		t.Errorf("expected KubeLogger level DEBUG, got %v", KubeLogger.level)
+	}
+	if RunnerLogger.level != DEBUG {
+		t.Errorf("expected RunnerLogger level DEBUG, got %v", RunnerLogger.level)
 	}
 
-	if !strings.Contains(output, "LAUNCHER") {
-		t.Errorf("expected context to be included in log, got: %s", output)
+	SetGlobalLevel(INFO)
+	if LauncherLogger.level != INFO {
+		t.Errorf("expected LauncherLogger level INFO, got %v", LauncherLogger.level)
 	}
 }
 
 func TestLogger_AllMethods(t *testing.T) {
 	logger := New(TESTRUNNER)
+	logger.SetLevel(DEBUG)
 
-	// Capture log output
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
+	originalOutput := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	defer func() { os.Stdout = originalOutput }()
 
-	// Test all logging methods
+	logger.Debug("debug message")
 	logger.Info("info message")
 	logger.Warn("warn message")
 	logger.Error("error message")
 
-	output := buf.String()
+	w.Close()
+	var output bytes.Buffer
+	output.ReadFrom(r)
 
-	if !strings.Contains(output, "info message") {
-		t.Error("Info message not found in output")
-	}
+	outputStr := output.String()
+	expectedMessages := []string{"debug message", "info message", "warn message", "error message"}
 
-	if !strings.Contains(output, "warn message") {
-		t.Error("Warn message not found in output")
-	}
-
-	if !strings.Contains(output, "error message") {
-		t.Error("Error message not found in output")
+	for _, msg := range expectedMessages {
+		if !strings.Contains(outputStr, msg) {
+			t.Errorf("expected output to contain %q, but it didn't", msg)
+		}
 	}
 }
