@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"time"
 
 	"testrunner/pkg/config"
@@ -42,9 +43,21 @@ func (jm *JobManager) StartMirrord() error {
 	}
 	args = append(args, "--target", jm.cfg.TargetPod)
 	args = append(args, "--target-namespace", jm.cfg.TargetNS)
-	args = append(args, "--", jm.cfg.ProcessToTest)
+
+	cmdParts := strings.Fields(jm.cfg.ProcessToTest)
+	logger.Info(logger.KUBE, "Debug: ProcessToTest='%s', cmdParts=%v", jm.cfg.ProcessToTest, cmdParts)
+	args = append(args, "--", cmdParts[0])
+	if len(cmdParts) > 1 {
+		args = append(args, cmdParts[1:]...)
+	}
+	logger.Info(logger.KUBE, "Debug: Final args=%v", args)
 
 	jm.mirrordProcess = exec.CommandContext(jm.ctx, "mirrord", args...)
+
+	// Set working directory to project root so mirrord can find the source files
+	if jm.cfg.ProjectRoot != "" {
+		jm.mirrordProcess.Dir = jm.cfg.ProjectRoot
+	}
 
 	var err error
 	jm.mirrordStdout, err = jm.mirrordProcess.StdoutPipe()
