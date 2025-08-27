@@ -9,64 +9,60 @@ This example demonstrates how to use ket for running integration tests with Node
 - `test/helper/` - Test utilities for managing cluster state and services
 - `test/integration/` - Integration tests that verify the full flow
 
-## Setup
+## Quick Start
 
 1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Build the TypeScript:
+2. Build TypeScript:
    ```bash
    npm run build
    ```
 
-3. Ensure you have a Kubernetes cluster running (Kind recommended)
-
-4. Build the ket test runner image:
+3. Start Kind cluster:
    ```bash
-   docker build -t ket-test-runner .
+   npm run cluster:start
    ```
 
-## Running Tests
+4. Fix RBAC permissions:
+   ```bash
+   npm run cluster:fix-rbac
+   ```
 
-### Integration Tests (via ket)
-```bash
-npm run test:integration
-```
+5. Run integration tests:
+   ```bash
+   npm run test:integration
+   ```
 
-This will:
-1. Deploy MongoDB and HTTP server to Kubernetes
-2. Run mirrord with --steal to intercept traffic
-3. Execute the integration tests
-4. Clean up all resources
+## Available Scripts
 
-**Note**: Integration tests must be run via ket, not directly with Mocha, as they require a Kubernetes cluster environment.
+### Testing
+- `npm run test:integration` - Run integration tests via ket
+- `npm run test:integration:watch` - Run tests with file watching
+- `npm run test:unit` - Run unit tests directly
 
-### Direct Test Execution (for development only)
-```bash
-# Create test namespace first
-npm run cluster:create-ns
+### Cluster Management
+- `npm run cluster:start` - Create Kind cluster
+- `npm run cluster:stop` - Delete Kind cluster
+- `npm run cluster:restart` - Restart cluster
+- `npm run cluster:status` - Show cluster status
+- `npm run cluster:create-ns` - Create test namespace
+- `npm run cluster:fix-rbac` - Fix RBAC permissions
 
-# Then run tests (will fail without proper cluster setup)
-npm run test:internal:mocha-integration
-```
+### Development
+- `npm run build` - Compile TypeScript
+- `npm run deploy` - Build Docker image
+- `npm run start` - Run compiled server
+- `npm run dev` - Run server with ts-node
 
-## Complete Workflow Example
+## Workflow
 
-```bash
-# 1. Setup everything
-npm run setup
-
-# 2. Create test namespace
-npm run cluster:create-ns
-
-# 3. Run integration tests
-npm run test:integration
-
-# 4. Cleanup when done
-npm run cleanup
-```
+1. **Setup**: Install dependencies and build TypeScript
+2. **Cluster**: Start Kind cluster and configure RBAC
+3. **Test**: Run integration tests via ket
+4. **Cleanup**: Stop cluster when done
 
 ## How It Works
 
@@ -83,4 +79,4 @@ Since tests run inside the Kubernetes cluster via ket:
 - **HTTP Server**: Uses `example-http-server:3000` (cluster service name)
 - **No Port Forwarding**: Direct cluster service communication
 
-The example uses mirrord to run the HTTP server locally while intercepting traffic meant for the Kubernetes pod, allowing for rapid development and testing without rebuilding images. All communication between services uses Kubernetes service discovery.
+The example uses mirrord to run the HTTP server locally while intercepting traffic meant for the Kubernetes pod, allowing for rapid development and testing without rebuilding images.
