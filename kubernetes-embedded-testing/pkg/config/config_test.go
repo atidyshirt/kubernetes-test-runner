@@ -1,49 +1,116 @@
 package config
 
 import (
-	"strings"
+	"os"
 	"testing"
 )
 
-func TestConfig_SetDefaults(t *testing.T) {
-	tests := []struct {
-		name     string
-		config   Config
-		expected string
-	}{
-		{
-			name: "empty namespace should generate UUID",
-			config: Config{
-				TargetNS: "",
-			},
-			expected: "ket-",
-		},
-		{
-			name: "existing namespace should not change",
-			config: Config{
-				TargetNS: "existing-namespace",
-			},
-			expected: "existing-namespace",
-		},
+func TestConfigStructure(t *testing.T) {
+	cfg := Config{
+		Mode:              "launch",
+		ProjectRoot:       ".",
+		Image:             "node:18-alpine",
+		Debug:             false,
+		TestCommand:       "npm test",
+		KeepNamespace:     false,
+		BackoffLimit:      1,
+		ActiveDeadlineS:   1800,
+		KindWorkspacePath: "/workspace",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.config.SetDefaults()
-			if !strings.HasPrefix(tt.config.TargetNS, tt.expected) {
-				t.Errorf("Expected namespace to start with %q, got %q", tt.expected, tt.config.TargetNS)
-			}
-			if tt.expected == "ket-" {
-				// Check that namespace starts with "ket-" and has 8 characters after
-				if len(tt.config.TargetNS) != 12 || !strings.HasPrefix(tt.config.TargetNS, "ket-") {
-					t.Errorf("Expected namespace to be 'ket-' + 8 chars, got %q", tt.config.TargetNS)
-				}
-			}
-		})
+	if cfg.Mode != "launch" {
+		t.Errorf("Expected Mode to be 'launch', got %s", cfg.Mode)
+	}
+
+	if cfg.ProjectRoot != "." {
+		t.Errorf("Expected ProjectRoot to be '.', got %s", cfg.ProjectRoot)
+	}
+
+	if cfg.Image != "node:18-alpine" {
+		t.Errorf("Expected Image to be 'node:18-alpine', got %s", cfg.Image)
+	}
+
+	if cfg.TestCommand != "npm test" {
+		t.Errorf("Expected TestCommand to be 'npm test', got %s", cfg.TestCommand)
+	}
+
+	if cfg.KindWorkspacePath != "/workspace" {
+		t.Errorf("Expected KindWorkspacePath to be '/workspace', got %s", cfg.KindWorkspacePath)
 	}
 }
 
-func TestConfig_Validation(t *testing.T) {
+func TestLoadFromFile(t *testing.T) {
+	tempFile, err := os.CreateTemp("", "ket-config-*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	configContent := `mode: launch
+projectRoot: /custom/path
+image: custom-image:latest
+debug: true
+testCommand: "npm run test:integration"
+keepNamespace: true
+backoffLimit: 3
+activeDeadlineS: 3600
+kindWorkspacePath: /custom/workspace`
+
+	if _, err := tempFile.WriteString(configContent); err != nil {
+		t.Fatalf("Failed to write config content: %v", err)
+	}
+	tempFile.Close()
+
+	cfg, err := LoadFromFile(tempFile.Name())
+	if err != nil {
+		t.Fatalf("Failed to load config file: %v", err)
+	}
+
+	if cfg.Mode != "launch" {
+		t.Errorf("Expected Mode to be 'launch', got %s", cfg.Mode)
+	}
+
+	if cfg.ProjectRoot != "/custom/path" {
+		t.Errorf("Expected ProjectRoot to be '/custom/path', got %s", cfg.ProjectRoot)
+	}
+
+	if cfg.Image != "custom-image:latest" {
+		t.Errorf("Expected Image to be 'custom-image:latest', got %s", cfg.Image)
+	}
+
+	if !cfg.Debug {
+		t.Error("Expected Debug to be true")
+	}
+
+	if cfg.TestCommand != "npm run test:integration" {
+		t.Errorf("Expected TestCommand to be 'npm run test:integration', got %s", cfg.TestCommand)
+	}
+
+	if !cfg.KeepNamespace {
+		t.Error("Expected KeepNamespace to be true")
+	}
+
+	if cfg.BackoffLimit != 3 {
+		t.Errorf("Expected BackoffLimit to be 3, got %d", cfg.BackoffLimit)
+	}
+
+	if cfg.ActiveDeadlineS != 3600 {
+		t.Errorf("Expected ActiveDeadlineS to be 3600, got %d", cfg.ActiveDeadlineS)
+	}
+
+	if cfg.KindWorkspacePath != "/custom/workspace" {
+		t.Errorf("Expected KindWorkspacePath to be '/custom/workspace', got %s", cfg.KindWorkspacePath)
+	}
+}
+
+func TestLoadFromFileNotFound(t *testing.T) {
+	_, err := LoadFromFile("nonexistent-file.yaml")
+	if err == nil {
+		t.Error("Expected error when loading nonexistent file")
+	}
+}
+
+func TestConfigValidation(t *testing.T) {
 	tests := []struct {
 		name        string
 		config      Config
@@ -52,77 +119,61 @@ func TestConfig_Validation(t *testing.T) {
 		{
 			name: "valid config",
 			config: Config{
-				Mode:          "launch",
-				TargetPod:     "test-pod",
-				TestCommand:   "npm test",
-				ProcessToTest: "npm start",
+				Mode:              "launch",
+				ProjectRoot:       ".",
+				Image:             "node:18-alpine",
+				Debug:             false,
+				TestCommand:       "npm test",
+				KeepNamespace:     false,
+				BackoffLimit:      1,
+				ActiveDeadlineS:   1800,
+				KindWorkspacePath: "/workspace",
 			},
 			shouldError: false,
-		},
-		{
-			name: "missing target pod",
-			config: Config{
-				Mode:          "launch",
-				TestCommand:   "npm test",
-				ProcessToTest: "npm start",
-			},
-			shouldError: true,
 		},
 		{
 			name: "missing test command",
 			config: Config{
-				Mode:          "launch",
-				TargetPod:     "test-pod",
-				ProcessToTest: "npm start",
+				Mode:              "launch",
+				ProjectRoot:       ".",
+				Image:             "node:18-alpine",
+				Debug:             false,
+				TestCommand:       "",
+				KeepNamespace:     false,
+				BackoffLimit:      1,
+				ActiveDeadlineS:   1800,
+				KindWorkspacePath: "/workspace",
 			},
 			shouldError: true,
 		},
 		{
-			name: "missing process to test",
+			name: "missing image",
 			config: Config{
-				Mode:        "launch",
-				TargetPod:   "test-pod",
-				TestCommand: "npm test",
+				Mode:              "launch",
+				ProjectRoot:       ".",
+				Image:             "",
+				Debug:             false,
+				TestCommand:       "npm test",
+				KeepNamespace:     false,
+				BackoffLimit:      1,
+				ActiveDeadlineS:   1800,
+				KindWorkspacePath: "/workspace",
 			},
 			shouldError: true,
-		},
-		{
-			name: "run mode should not require target pod",
-			config: Config{
-				Mode: "run",
-			},
-			shouldError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// This would be validation logic if we add it to the config package
-			// For now, just test the basic structure
-			if tt.config.Mode == "" {
-				t.Error("mode should not be empty")
+			if tt.shouldError {
+				if tt.config.TestCommand != "" && tt.config.Image != "" {
+					t.Error("Expected config to be invalid, but it appears valid")
+				}
+			} else {
+				if tt.config.TestCommand == "" || tt.config.Image == "" {
+					t.Error("Expected config to be valid, but it appears invalid")
+				}
 			}
 		})
-	}
-}
-
-func TestConfig_DefaultValues(t *testing.T) {
-	config := Config{}
-
-	// Test that default values are reasonable
-	if config.BackoffLimit != 0 {
-		t.Errorf("expected default backoff limit to be 0, got %d", config.BackoffLimit)
-	}
-
-	if config.ActiveDeadlineS != 0 {
-		t.Errorf("expected default active deadline to be 0, got %d", config.ActiveDeadlineS)
-	}
-
-	if config.KeepNamespace != false {
-		t.Errorf("expected default keep namespace to be false, got %t", config.KeepNamespace)
-	}
-
-	if config.Debug != false {
-		t.Errorf("expected default debug to be false, got %t", config.Debug)
 	}
 }

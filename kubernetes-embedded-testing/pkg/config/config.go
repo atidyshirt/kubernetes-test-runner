@@ -1,29 +1,33 @@
 package config
 
 import (
-	"fmt"
+	"os"
 
-	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Mode              string
-	ProjectRoot       string
-	Image             string
-	Debug             bool
-	TargetPod         string
-	TargetNS          string
-	TestCommand       string
-	ProcessToTest     string
-	Steal             bool
-	KeepNamespace     bool
-	BackoffLimit      int32
-	ActiveDeadlineS   int64
-	KindWorkspacePath string
+	Mode              string `yaml:"mode" json:"mode"`
+	ProjectRoot       string `yaml:"projectRoot" json:"projectRoot"`
+	Image             string `yaml:"image" json:"image"`
+	Debug             bool   `yaml:"debug" json:"debug"`
+	TestCommand       string `yaml:"testCommand" json:"testCommand"`
+	KeepNamespace     bool   `yaml:"keepNamespace" json:"keepNamespace"`
+	BackoffLimit      int32  `yaml:"backoffLimit" json:"backoffLimit"`
+	ActiveDeadlineS   int64  `yaml:"activeDeadlineS" json:"activeDeadlineS"`
+	KindWorkspacePath string `yaml:"kindWorkspacePath" json:"kindWorkspacePath"`
 }
 
-func (cfg *Config) SetDefaults() {
-	if cfg.TargetNS == "" {
-		cfg.TargetNS = fmt.Sprintf("ket-%s", uuid.New().String()[:8])
+func LoadFromFile(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
 	}
+
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }

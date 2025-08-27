@@ -63,8 +63,6 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 		return nil, fmt.Errorf("failed to calculate working directory: %w", err)
 	}
 
-	logger.KubeLogger.Info("Job configuration: hostPath=%s, workingDir=%s, kindWorkspacePath=%s", hostProjectRoot, workingDir, cfg.KindWorkspacePath)
-
 	projectName := "project"
 	if cfg.ProjectRoot == "." {
 		if cwd, err := os.Getwd(); err == nil {
@@ -108,35 +106,7 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 							Image:           cfg.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args: []string{
-								fmt.Sprintf(`
-set -e
-echo "Starting test execution%s"
-echo "Target pod: %s in namespace: %s"
-
-# Run the test command
-echo "Running test command: %s"
-eval %s
-TEST_EXIT_CODE=$?
-echo "Test command completed with exit code: $TEST_EXIT_CODE"
-
-exit $TEST_EXIT_CODE
-`,
-									func() string {
-										if cfg.ProcessToTest != "" {
-											return " with mirrord"
-										}
-										return ""
-									}(),
-									cfg.TargetPod, cfg.TargetNS,
-									cfg.TestCommand, cfg.TestCommand),
-							},
-							Env: []corev1.EnvVar{
-								{Name: "TARGET_NAMESPACE", Value: cfg.TargetNS},
-								{Name: "TARGET_POD", Value: cfg.TargetPod},
-								{Name: "PROCESS_TO_TEST", Value: cfg.ProcessToTest},
-								{Name: "TEST_COMMAND", Value: cfg.TestCommand},
-							},
+							Args:            []string{cfg.TestCommand},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "source-code",
