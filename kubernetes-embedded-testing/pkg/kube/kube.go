@@ -129,41 +129,74 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 }
 
 func StreamJobLogs(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
-	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("job-name=%s", job.Name),
-	})
-	if err != nil {
-		return err
-	}
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("no pods found for job %s", job.Name)
-	}
-	pod := pods.Items[0]
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("job-name=%s", job.Name),
+			})
+			if err != nil {
+				logger.KubeLogger.Warn("Failed to list pods: %v", err)
+				time.Sleep(2 * time.Second)
+				continue
+			}
 
+			if len(pods.Items) == 0 {
+				logger.KubeLogger.Warn("No pods found for job %s, waiting...", job.Name)
+				time.Sleep(2 * time.Second)
+				continue
+			}
+
+			pod := pods.Items[0]
+
+			if pod.Status.Phase != corev1.PodRunning {
+				logger.KubeLogger.Info("Pod %s is not running yet (status: %s), waiting...", pod.Name, pod.Status.Phase)
+				time.Sleep(2 * time.Second)
+				continue
+			}
+
+			if err := streamPodLogs(ctx, client, pod, namespace); err != nil {
+				logger.KubeLogger.Warn("Pod log streaming failed: %v", err)
+				time.Sleep(2 * time.Second)
+				continue
+			}
+		}
+	}
+}
+
+func streamPodLogs(ctx context.Context, client *kubernetes.Clientset, pod corev1.Pod, namespace string) error {
 	req := client.CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
 		Follow: true,
 	})
+
 	stream, err := req.Stream(ctx)
 	if err != nil {
 		return err
 	}
 	defer stream.Close()
 
-	buf := make([]byte, 2000)
+	logger.KubeLogger.Info("Streaming logs from pod %s", pod.Name)
+
+	buf := make([]byte, 1024)
 	for {
-		n, err := stream.Read(buf)
-		if n > 0 {
-			fmt.Print(string(buf[:n]))
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			n, err := stream.Read(buf)
+			if n > 0 {
+				fmt.Print(string(buf[:n]))
+			}
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
 		}
 	}
-	logger.KubeLogger.Info("Finished streaming logs from %s", pod.Name)
-	return nil
 }
 
 func WaitForJobCompletion(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {

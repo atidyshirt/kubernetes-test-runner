@@ -34,16 +34,14 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create job: %w", err)
 	}
 
-	if err := kube.StreamJobLogs(ctx, client, job, ns); err != nil {
-		logger.LauncherLogger.Warn("Log stream failed: %v", err)
-	}
+	go func() {
+		if err := kube.StreamJobLogs(ctx, client, job, ns); err != nil {
+			logger.LauncherLogger.Warn("Log stream failed: %v", err)
+		}
+	}()
 
 	if err := kube.WaitForJobCompletion(ctx, client, job, ns); err != nil {
 		logger.LauncherLogger.Error("Job failed: %v", err)
-	}
-
-	if err := kube.CopyTestResults(ctx, client, job, ns); err != nil {
-		logger.LauncherLogger.Error("Failed to copy test results: %v", err)
 	}
 
 	if !cfg.KeepNamespace {
