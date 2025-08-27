@@ -33,7 +33,7 @@ make build
 
 ```mermaid
 sequenceDiagram
-    participant User
+    participant User as Localhost/Dev Env
     participant Ket as ket Binary
     participant Cluster as Kind Cluster
     participant TestPod as Test Runner Pod
@@ -42,27 +42,29 @@ sequenceDiagram
     User->>Ket: ket launch --test-command
     Ket->>Cluster: Create test namespace
     Cluster-->>Ket: Namespace created
-    
+
     Ket->>Cluster: Deploy test runner pod
     Cluster->>TestNamespace: Schedule pod
     TestNamespace-->>Cluster: Pod running
     Cluster-->>Ket: Pod ready
-    
+
     Ket->>TestPod: Mount source code
     TestPod-->>Ket: Source mounted
-    
+
     Ket->>TestPod: Execute test command
     TestPod->>TestNamespace: Deploy test services
     TestNamespace-->>TestPod: Services ready
-    
+
     loop Per-Test Lifecycle
         TestPod->>TestNamespace: Create test resources
         TestNamespace-->>TestPod: Resources ready
         TestPod->>TestPod: Run test (e.g., mocha)
+        TestPod-->>Ket: Stream Mocha Logs
+        Ket-->>User: Test Runner Pod std{out,err}
         TestPod->>TestNamespace: Clean test resources
         TestNamespace-->>TestPod: Resources cleaned
     end
-    
+
     TestPod-->>Ket: Tests complete
     Ket->>Cluster: Cleanup namespace
     Cluster->>TestNamespace: Delete namespace
