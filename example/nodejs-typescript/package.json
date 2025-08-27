@@ -1,0 +1,41 @@
+{
+  "name": "nodejs-typescript-example",
+  "version": "1.0.0",
+  "description": "Node.js + TypeScript integration test example using ket",
+  "main": "dist/example-http-server.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "docker build -t example-http-server:latest .",
+    "start": "node dist/example-http-server.js",
+    "dev": "ts-node src/example-http-server.ts",
+    "test:unit": "mocha -r ts-node/register test/unit/**/*.spec.ts",
+    "test:integration": "ket launch --config ket-config.yaml",
+    "test:internal:mocha-integration": "mocha -r ts-node/register test/integration/**/*.spec.ts",
+    "cluster:start": "kind create cluster --name ket-test --config kind-config.yaml",
+    "cluster:stop": "kind delete cluster --name ket-test",
+    "cluster:restart": "npm run cluster:stop && npm run cluster:start",
+    "cluster:status": "kind get clusters",
+    "cluster:create-ns": "kubectl create namespace test-namespace",
+    "cluster:fix-rbac": "kubectl create clusterrolebinding ket-test-admin --clusterrole=cluster-admin --serviceaccount=ket-system:default --dry-run=client -o yaml | kubectl apply -f -",
+    "cluster:fix-rbac:all": "kubectl create clusterrolebinding ket-cluster-admin --clusterrole=cluster-admin --group=system:serviceaccounts --dry-run=client -o yaml | kubectl apply -f -",
+    "docker:build": "docker build -t ket-test-runner ../../kubernetes-embedded-testing",
+    "docker:build:local": "docker build -t ket-test-runner .",
+    "setup": "npm run docker:build && npm run cluster:start && echo 'Waiting for cluster to be ready...' && sleep 10 && kubectl cluster-info",
+    "cleanup": "npm run cluster:stop"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.2",
+    "@types/express": "^4.17.21",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.0",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.0"
+  }
+}
