@@ -86,7 +86,6 @@ func TestCreateJob_JobNaming(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config.Config{
 				ProjectRoot: tt.projectRoot,
-				TargetNS:    "test-namespace",
 			}
 
 			projectName := getProjectName(cfg.ProjectRoot)
