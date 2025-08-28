@@ -5,6 +5,7 @@
   "main": "dist/example-http-server.js",
   "scripts": {
     "build": "tsc",
+    "postbuild": "cp package.json dist/ && cp -r node_modules dist/",
     "deploy": "docker build -t example-http-server:latest .",
     "start": "node dist/example-http-server.js",
     "dev": "ts-node src/example-http-server.ts",

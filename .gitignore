@@ -5,6 +5,7 @@ bin/
 *.out
 
 # Node.js
+dist/
 node_modules/
 npm-debug.log*
 .env
