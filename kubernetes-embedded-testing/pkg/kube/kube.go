@@ -17,14 +17,17 @@ import (
 
 // WaitForTestCompletion waits for the injected test runner job to complete and returns the test results
 func WaitForTestCompletion(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
-	logger.KubeLogger.Info("Waiting for test job %s to complete", job.Name)
+	logger.KubeLogger.Info("Waiting for Test Runner Job %s to complete", job.Name)
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
+			logger.KubeLogger.Debug("Context cancelled, stopping wait for test completion")
 			return ctx.Err()
-		case <-time.After(5 * time.Second):
-			// Check job status
+		case <-ticker.C:
 			currentJob, err := client.BatchV1().Jobs(namespace).Get(ctx, job.Name, metav1.GetOptions{})
 			if err != nil {
 				logger.KubeLogger.Warn("Failed to get job status: %v", err)
@@ -32,25 +35,24 @@ func WaitForTestCompletion(ctx context.Context, client *kubernetes.Clientset, jo
 			}
 
 			if currentJob.Status.Succeeded > 0 {
-				logger.KubeLogger.Info("Test job %s completed successfully", job.Name)
+				logger.KubeLogger.Info("Test Runner Job %s completed successfully", job.Name)
 				return nil
 			}
 
 			if currentJob.Status.Failed > 0 {
-				logger.KubeLogger.Error("Test job %s failed", job.Name)
-				return fmt.Errorf("test job %s failed", job.Name)
+				logger.KubeLogger.Error("Test Runner Job %s failed", job.Name)
+				return fmt.Errorf("Test Runner Job %s failed", job.Name)
 			}
 
-			logger.KubeLogger.Info("Test job %s is still running...", job.Name)
+			logger.KubeLogger.Debug("Test Runner Job %s is still running...", job.Name)
 		}
 	}
 }
 
 // StreamTestOutputToHost streams the test output from the injected test runner pod back to the host machine
 func StreamTestOutputToHost(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job, namespace string) error {
-	logger.KubeLogger.Info("Streaming test output from job %s back to host", job.Name)
+	logger.KubeLogger.Debug("Attempting to stream test output from job %s...", job.Name)
 
-	// Wait for job to start with timeout
 	timeout := time.After(60 * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -60,15 +62,15 @@ func StreamTestOutputToHost(ctx context.Context, client *kubernetes.Clientset, j
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-timeout:
-			return fmt.Errorf("timeout waiting for test job %s to become active", job.Name)
+			return fmt.Errorf("timeout waiting for Test Runner Job %s to become active", job.Name)
 		case <-ticker.C:
 			currentJob, err := client.BatchV1().Jobs(namespace).Get(ctx, job.Name, metav1.GetOptions{})
 			if err != nil {
-				logger.KubeLogger.Warn("Failed to get job status: %v", err)
+				logger.KubeLogger.Warn("Failed to get Test Runner Job status: %v", err)
 				continue
 			}
 			if currentJob.Status.Active > 0 {
-				logger.KubeLogger.Warn("Test job %s is active, starting output stream", job.Name)
+				logger.KubeLogger.Debug("Test Runner Job %s is active, starting output stream", job.Name)
 				goto StartStreaming
 			}
 		}
@@ -79,10 +81,10 @@ StartStreaming:
 		LabelSelector: "job-name=" + job.Name,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list pods for test job: %w", err)
+		return fmt.Errorf("failed to list pods for Test Runner Job: %w", err)
 	}
 	if len(pods.Items) == 0 {
-		return fmt.Errorf("no pods found for test job %s", job.Name)
+		return fmt.Errorf("no pods found for Test Runner Job %s", job.Name)
 	}
 
 	pod := pods.Items[0]
@@ -98,6 +100,18 @@ StartStreaming:
 	}
 	defer stream.Close()
 
-	_, err = io.Copy(os.Stdout, stream)
-	return err
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := io.Copy(os.Stdout, stream)
+		done <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		logger.KubeLogger.Debug("Context cancelled, stopping output stream")
+		return ctx.Err()
+	case err := <-done:
+		return err
+	}
 }

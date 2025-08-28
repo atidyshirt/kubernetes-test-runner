@@ -16,7 +16,7 @@ func addPersistentFlags(cmd *cobra.Command) {
 }
 
 // buildConfig builds the configuration from flags and config file
-func buildConfig() config.Config {
+func buildConfig() *config.Config {
 	var cfg config.Config
 
 	if configFile != "" {
@@ -44,5 +44,5 @@ func buildConfig() config.Config {
 		cfg.KeepNamespace = keepNamespace
 	}
 
-	return cfg
+	return &cfg
 }

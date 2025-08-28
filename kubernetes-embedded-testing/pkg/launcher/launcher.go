@@ -13,6 +13,9 @@ import (
 
 func Run(cfg config.Config) error {
 	ctx := context.Background()
+	if cfg.Ctx != nil {
+		ctx = cfg.Ctx
+	}
 
 	if cfg.Debug {
 		logger.SetGlobalLevel(logger.DEBUG)
@@ -29,6 +32,16 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create test namespace: %w", err)
 	}
 
+	// Ensure cleanup on context cancellation
+	defer func() {
+		if !cfg.KeepNamespace {
+			logger.LauncherLogger.Info("Cleaning up test namespace %s", ns)
+			if err := kube.DeleteNamespace(context.Background(), client, ns); err != nil {
+				logger.LauncherLogger.Error("Failed to delete test namespace: %v", err)
+			}
+		}
+	}()
+
 	job, err := kube.InjectTestRunnerJob(ctx, client, cfg, ns)
 	if err != nil {
 		return fmt.Errorf("failed to create job: %w", err)
@@ -42,13 +55,6 @@ func Run(cfg config.Config) error {
 
 	if err := kube.WaitForTestCompletion(ctx, client, job, ns); err != nil {
 		return fmt.Errorf("test execution failed: %w", err)
-	}
-
-	if !cfg.KeepNamespace {
-		logger.LauncherLogger.Info("Cleaning up test namespace %s", ns)
-		if err := kube.DeleteNamespace(ctx, client, ns); err != nil {
-			logger.LauncherLogger.Error("Failed to delete test namespace: %v", err)
-		}
 	}
 
 	return nil

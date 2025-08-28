@@ -30,6 +30,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+
+	<-ctx.Done()
 }
 
 func setupSignalHandling(ctx context.Context, cancel context.CancelFunc) {

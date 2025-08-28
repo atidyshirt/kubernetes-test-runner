@@ -63,7 +63,8 @@ func executeLaunch(ctx context.Context) error {
 	}
 
 	cfg := buildConfig()
-	if err := launcher.Run(cfg); err != nil {
+	cfg.Ctx = ctx
+	if err := launcher.Run(*cfg); err != nil {
 		return fmt.Errorf("launch failed: %w", err)
 	}
 	return nil
