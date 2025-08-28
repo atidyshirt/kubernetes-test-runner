@@ -29,19 +29,19 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create test namespace: %w", err)
 	}
 
-	job, err := kube.CreateJob(ctx, client, cfg, ns)
+	job, err := kube.InjectTestRunnerJob(ctx, client, cfg, ns)
 	if err != nil {
 		return fmt.Errorf("failed to create job: %w", err)
 	}
 
 	go func() {
-		if err := kube.StreamJobLogs(ctx, client, job, ns); err != nil {
-			logger.LauncherLogger.Warn("Log stream failed: %v", err)
+		if err := kube.StreamTestOutputToHost(ctx, client, job, ns); err != nil {
+			logger.LauncherLogger.Warn("Test output stream failed: %v", err)
 		}
 	}()
 
-	if err := kube.WaitForJobCompletion(ctx, client, job, ns); err != nil {
-		logger.LauncherLogger.Error("Job failed: %v", err)
+	if err := kube.WaitForTestCompletion(ctx, client, job, ns); err != nil {
+		return fmt.Errorf("test execution failed: %w", err)
 	}
 
 	if !cfg.KeepNamespace {
