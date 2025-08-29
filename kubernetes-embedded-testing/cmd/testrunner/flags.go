@@ -19,7 +19,7 @@ func addRootFlags(cmd *cobra.Command) {
 }
 
 func addLaunchFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&image, "image", "i", "ket-test-runner:latest",
+	cmd.Flags().StringVarP(&image, "image", "i", "atidyshirt/kubernetes-embedded-test-runner-base:latest",
 		"Container image used for the test runner pod."+
 			"Must include dependencies for the test command (e.g., mocha or other test runners).")
 	cmd.Flags().StringVarP(&testCommand, "test-command", "t", "",
@@ -61,7 +61,7 @@ func buildConfig() *config.Config {
 	v := setupViper()
 
 	v.SetDefault("mode", "launch")
-	v.SetDefault("image", "ket-test-runner:latest")
+	v.SetDefault("image", "atidyshirt/kubernetes-embedded-test-runner-base:latest")
 	v.SetDefault("projectRoot", ".")
 	v.SetDefault("clusterWorkspacePath", "/workspace")
 	v.SetDefault("backoffLimit", int32(1))
@@ -77,7 +77,7 @@ func buildConfig() *config.Config {
 	if debug {
 		v.Set("debug", debug)
 	}
-	if image != "ket-test-runner:latest" {
+	if image != "atidyshirt/kubernetes-embedded-test-runner-base:latest" {
 		v.Set("image", image)
 	}
 	if testCommand != "" {

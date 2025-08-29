@@ -21,7 +21,7 @@
     "cluster:start": "kind create cluster --name ket-test --config kind-config.yaml",
     "cluster:stop": "kind delete cluster --name ket-test",
 
-    "docker:build-test-runner": "docker build -t ket-test-runner ../../kubernetes-embedded-testing"
+    "docker:build-test-runner": "docker build -t kubernetes-embedded-test-runner-node:latest ../../kubernetes-embedded-testing"
   },
   "dependencies": {
     "axios": "^1.6.0",

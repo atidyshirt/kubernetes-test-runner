@@ -86,12 +86,38 @@ lint:
 	$(GOCMD) vet ./...
 	@echo "Linting complete"
 
-# Build Docker image
+# Build Docker images
 .PHONY: docker-build
 docker-build:
-	@echo "Building Docker image..."
+	@echo "Building Docker images..."
+	docker build --target base -t kubernetes-embedded-test-runner-base:latest .
+	docker build --target node-runner -t kubernetes-embedded-test-runner-node:latest .
+	docker build --target golang-runner -t kubernetes-embedded-test-runner-golang:latest .
 	docker build -t $(DOCKER_IMAGE) .
-	@echo "Docker image built: $(DOCKER_IMAGE)"
+	@echo "All Docker images built:"
+	@echo "  - kubernetes-embedded-test-runner-base:latest"
+	@echo "  - kubernetes-embedded-test-runner-node:latest"
+	@echo "  - kubernetes-embedded-test-runner-golang:latest"
+	@echo "  - $(DOCKER_IMAGE)"
+
+# Build specific Docker image
+.PHONY: docker-build-base
+docker-build-base:
+	@echo "Building base Docker image..."
+	docker build --target base -t kubernetes-embedded-test-runner-base:latest .
+	@echo "Base Docker image built: kubernetes-embedded-test-runner-base:latest"
+
+.PHONY: docker-build-node
+docker-build-node:
+	@echo "Building Node.js Docker image..."
+	docker build --target node-runner -t kubernetes-embedded-test-runner-node:latest .
+	@echo "Node.js Docker image built: kubernetes-embedded-test-runner-node:latest"
+
+.PHONY: docker-build-golang
+docker-build-golang:
+	@echo "Building Go Docker image..."
+	docker build --target golang-runner -t kubernetes-embedded-test-runner-golang:latest .
+	@echo "Go Docker image built: kubernetes-embedded-test-runner-golang:latest"
 
 # Run Docker image
 .PHONY: docker-run
@@ -132,7 +158,10 @@ help:
 	@echo "  mod-update     - Update go modules"
 	@echo "  fmt            - Format code"
 	@echo "  lint           - Lint code"
-	@echo "  docker-build   - Build Docker image"
+	@echo "  docker-build   - Build all Docker images"
+	@echo "  docker-build-base  - Build base Docker image"
+	@echo "  docker-build-node   - Build Node.js Docker image"
+	@echo "  docker-build-golang - Build Go Docker image"
 	@echo "  docker-run     - Run Docker image"
 	@echo "  run            - Build and run locally"
 	@echo "  install        - Install binary to system"

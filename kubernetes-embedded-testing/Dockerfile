@@ -1,10 +1,7 @@
-FROM ubuntu:24.04
-
-# Set environment variables
+# Build base image with common dependencies
+FROM ubuntu:24.04 AS base
 ENV DEBIAN_FRONTEND=noninteractive
-ENV NODE_VERSION=22
 
-# Install system dependencies and tools
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -14,28 +11,43 @@ RUN apt-get update && apt-get install -y \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy kubectl from official image
 COPY --from=bitnami/kubectl:latest /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
 
-# Install Node.js
+RUN curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+
+RUN mkdir -p /workspace /reports
+WORKDIR /workspace
+
+RUN kubectl version --client \
+    && mirrord --version
+
+# Build Node.js test runner
+FROM base AS node-runner
+ENV NODE_VERSION=22
+
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install mirrord using official installation script
-RUN curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+RUN node --version \
+    && npm --version
 
-# Create necessary directories
-RUN mkdir -p /workspace /reports
+# Build Go test runner
+FROM base AS golang-runner
+ENV GO_VERSION=1.25.0
 
-# Set working directory
-WORKDIR /workspace
+RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz \
+    && rm go${GO_VERSION}.linux-amd64.tar.gz
 
-# Verify installations
-RUN kubectl version --client \
-    && node --version \
-    && npm --version \
-    && mirrord --version
+ENV PATH=$PATH:/usr/local/go/bin
+ENV GOPATH=/go
+ENV GOCACHE=/go/cache
 
-# Set default command
+RUN mkdir -p /go/src /go/bin /go/cache
+
+RUN go version
+
+# Default to Node.js runner for backward compatibility
+FROM node-runner
 CMD ["/bin/bash"]

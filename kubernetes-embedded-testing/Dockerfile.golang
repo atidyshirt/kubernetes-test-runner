@@ -1,0 +1,23 @@
+FROM kubernetes-embedded-test-runner-base:latest
+
+# Set environment variables
+ENV GO_VERSION=1.22
+
+# Install Go
+RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz \
+    && rm go${GO_VERSION}.linux-amd64.tar.gz
+
+# Set Go environment variables
+ENV PATH=$PATH:/usr/local/go/bin
+ENV GOPATH=/go
+ENV GOCACHE=/go/cache
+
+# Create Go directories
+RUN mkdir -p /go/src /go/bin /go/cache
+
+# Verify Go installation
+RUN go version
+
+# Set default command
+CMD ["/bin/bash"]
