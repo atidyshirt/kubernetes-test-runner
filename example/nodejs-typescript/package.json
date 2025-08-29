@@ -4,23 +4,22 @@
   "description": "Node.js + TypeScript integration test example using ket",
   "main": "dist/example-http-server.js",
   "scripts": {
-    "build": "tsc",
     "postbuild": "cp package.json dist/ && cp -r node_modules dist/",
+
+    "build": "tsc",
     "deploy": "docker build -t example-http-server:latest .",
     "start": "node dist/example-http-server.js",
     "dev": "ts-node src/example-http-server.ts",
 
-    "test:unit": "mocha -r ts-node/register test/unit/**/*.spec.ts",
     "test:integration": "ket launch",
     "test:integration:watch": "ket launch --test-command 'npm run test:internal:mocha-integration:watch'",
     "test:integration:debug": "ket launch --debug --keep-namespace",
 
-    "test:internal:mocha-integration": "mocha -r ts-node/register test/integration/**/*.spec.ts",
-    "test:internal:mocha-integration:watch": "mocha -r ts-node/register --watch --watch-files src/**/*.ts,test/**/*.ts test/integration/**/*.spec.ts",
+    "test:internal:mocha-integration": "mocha -r ts-node/register",
+    "test:internal:mocha-integration:watch": "mocha -r ts-node/register --watch --watch-files src/**/*.ts,test/**/*.ts",
 
     "cluster:start": "kind create cluster --name ket-test --config kind-config.yaml",
     "cluster:stop": "kind delete cluster --name ket-test",
-    "cluster:restart": "npm run cluster:stop && npm run cluster:start",
 
     "docker:build-test-runner": "docker build -t ket-test-runner ../../kubernetes-embedded-testing"
   },
