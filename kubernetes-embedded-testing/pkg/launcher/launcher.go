@@ -7,9 +7,17 @@ import (
 	"testrunner/pkg/config"
 	"testrunner/pkg/kube"
 	"testrunner/pkg/logger"
-
-	"github.com/google/uuid"
 )
+
+// TestExecutionError represents a test execution failure with an exit code
+type TestExecutionError struct {
+	ExitCode int
+	Message  string
+}
+
+func (e *TestExecutionError) Error() string {
+	return fmt.Sprintf("%s (exit code: %d)", e.Message, e.ExitCode)
+}
 
 func Run(cfg config.Config) error {
 	ctx := context.Background()
@@ -26,35 +34,46 @@ func Run(cfg config.Config) error {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
-	testNamespace := fmt.Sprintf("ket-%s", uuid.New().String()[:8])
-	ns, err := kube.CreateNamespace(ctx, client, testNamespace)
+	namespace := kube.GenerateTestNamespace(cfg.ProjectRoot)
+	logger.LauncherLogger.Info("Using test namespace: %s", namespace)
+
+	createdNamespace, err := kube.CreateNamespace(ctx, client, namespace)
 	if err != nil {
-		return fmt.Errorf("failed to create test namespace: %w", err)
+		return fmt.Errorf("failed to create namespace: %w", err)
+	}
+
+	job, err := kube.CreateJob(ctx, client, cfg, createdNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to create job: %w", err)
 	}
 
 	// Ensure cleanup on context cancellation
 	defer func() {
-		if !cfg.KeepNamespace {
-			logger.LauncherLogger.Info("Cleaning up test namespace %s", ns)
-			if err := kube.DeleteNamespace(context.Background(), client, ns); err != nil {
+		if !cfg.KeepTestRunner {
+			logger.LauncherLogger.Info("Cleaning up test namespace %s", createdNamespace)
+			if err := kube.ForceDeleteNamespace(context.Background(), client, createdNamespace); err != nil {
 				logger.LauncherLogger.Error("Failed to delete test namespace: %v", err)
 			}
 		}
 	}()
 
-	job, err := kube.InjectTestRunnerJob(ctx, client, cfg, ns)
-	if err != nil {
-		return fmt.Errorf("failed to create job: %w", err)
-	}
-
 	go func() {
-		if err := kube.StreamTestOutputToHost(ctx, client, job, ns); err != nil {
+		if err := kube.StreamTestOutputToHost(ctx, client, job); err != nil {
 			logger.LauncherLogger.Warn("Test output stream failed: %v", err)
 		}
 	}()
 
-	if err := kube.WaitForTestCompletion(ctx, client, job, ns); err != nil {
+	testResult, err := kube.WaitForTestCompletion(ctx, client, job)
+	if err != nil {
 		return fmt.Errorf("test execution failed: %w", err)
+	}
+
+	// If the test failed, return a special error that includes the exit code
+	if !testResult.Success {
+		return &TestExecutionError{
+			ExitCode: testResult.ExitCode,
+			Message:  "test execution failed",
+		}
 	}
 
 	return nil

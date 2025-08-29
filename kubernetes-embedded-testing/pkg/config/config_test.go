@@ -12,10 +12,10 @@ func TestConfigStructure(t *testing.T) {
 		Image:             "node:18-alpine",
 		Debug:             false,
 		TestCommand:       "npm test",
-		KeepNamespace:     false,
+		KeepTestRunner:     false,
 		BackoffLimit:      1,
 		ActiveDeadlineS:   1800,
-		KindWorkspacePath: "/workspace",
+		WorkspacePath: "/workspace",
 	}
 
 	if cfg.Mode != "launch" {
@@ -34,8 +34,8 @@ func TestConfigStructure(t *testing.T) {
 		t.Errorf("Expected TestCommand to be 'npm test', got %s", cfg.TestCommand)
 	}
 
-	if cfg.KindWorkspacePath != "/workspace" {
-		t.Errorf("Expected KindWorkspacePath to be '/workspace', got %s", cfg.KindWorkspacePath)
+	if cfg.WorkspacePath != "/workspace" {
+		t.Errorf("Expected KindWorkspacePath to be '/workspace', got %s", cfg.WorkspacePath)
 	}
 }
 
@@ -86,7 +86,7 @@ kindWorkspacePath: /custom/workspace`
 		t.Errorf("Expected TestCommand to be 'npm run test:integration', got %s", cfg.TestCommand)
 	}
 
-	if !cfg.KeepNamespace {
+	if !cfg.KeepTestRunner {
 		t.Error("Expected KeepNamespace to be true")
 	}
 
@@ -98,8 +98,8 @@ kindWorkspacePath: /custom/workspace`
 		t.Errorf("Expected ActiveDeadlineS to be 3600, got %d", cfg.ActiveDeadlineS)
 	}
 
-	if cfg.KindWorkspacePath != "/custom/workspace" {
-		t.Errorf("Expected KindWorkspacePath to be '/custom/workspace', got %s", cfg.KindWorkspacePath)
+	if cfg.WorkspacePath != "/custom/workspace" {
+		t.Errorf("Expected KindWorkspacePath to be '/custom/workspace', got %s", cfg.WorkspacePath)
 	}
 }
 
@@ -124,10 +124,10 @@ func TestConfigValidation(t *testing.T) {
 				Image:             "node:18-alpine",
 				Debug:             false,
 				TestCommand:       "npm test",
-				KeepNamespace:     false,
+				KeepTestRunner:     false,
 				BackoffLimit:      1,
 				ActiveDeadlineS:   1800,
-				KindWorkspacePath: "/workspace",
+				WorkspacePath: "/workspace",
 			},
 			shouldError: false,
 		},
@@ -139,10 +139,10 @@ func TestConfigValidation(t *testing.T) {
 				Image:             "node:18-alpine",
 				Debug:             false,
 				TestCommand:       "",
-				KeepNamespace:     false,
+				KeepTestRunner:     false,
 				BackoffLimit:      1,
 				ActiveDeadlineS:   1800,
-				KindWorkspacePath: "/workspace",
+				WorkspacePath: "/workspace",
 			},
 			shouldError: true,
 		},
@@ -154,10 +154,10 @@ func TestConfigValidation(t *testing.T) {
 				Image:             "",
 				Debug:             false,
 				TestCommand:       "npm test",
-				KeepNamespace:     false,
+				KeepTestRunner:     false,
 				BackoffLimit:      1,
 				ActiveDeadlineS:   1800,
-				KindWorkspacePath: "/workspace",
+				WorkspacePath: "/workspace",
 			},
 			shouldError: true,
 		},

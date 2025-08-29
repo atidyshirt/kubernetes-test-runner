@@ -15,9 +15,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// InjectTestRunnerJob creates a Kubernetes job that injects the test runner into a pod,
-// mounts the source code directory from the host machine, and runs the specified test command
-func InjectTestRunnerJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config, namespace string) (*batchv1.Job, error) {
+// CreateJob creates a new Kubernetes job for running tests
+func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Config, namespace string) (*batchv1.Job, error) {
 	hostProjectRoot := filepath.Join(cfg.WorkspacePath, cfg.ProjectRoot)
 	if cfg.ProjectRoot == "." {
 		hostProjectRoot = cfg.WorkspacePath
@@ -76,6 +75,20 @@ func InjectTestRunnerJob(ctx context.Context, client *kubernetes.Clientset, cfg 
 								cfg.TestCommand,
 							},
 							WorkingDir: workingDir,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "KET_TEST_NAMESPACE",
+									Value: namespace,
+								},
+								{
+									Name:  "KET_PROJECT_ROOT",
+									Value: cfg.ProjectRoot,
+								},
+								{
+									Name:  "KET_WORKSPACE_PATH",
+									Value: cfg.WorkspacePath,
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "source-code",
@@ -101,12 +114,4 @@ func InjectTestRunnerJob(ctx context.Context, client *kubernetes.Clientset, cfg 
 
 	logger.KubeLogger.Info("Job created successfully: %s", createdJob.Name)
 	return createdJob, nil
-}
-
-// calculateWorkingDirectory determines the working directory for the job
-func calculateWorkingDirectory(projectRoot, kindWorkspacePath string) (string, error) {
-	if projectRoot == "." {
-		return kindWorkspacePath, nil
-	}
-	return filepath.Join(kindWorkspacePath, projectRoot), nil
 }
