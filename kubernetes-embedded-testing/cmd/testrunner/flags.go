@@ -30,6 +30,8 @@ func addLaunchFlags(cmd *cobra.Command) {
 		"Maximum number of retry attempts for a failed Kubernetes job.")
 	cmd.Flags().Int64VarP(&activeDeadline, "active-deadline-seconds", "d", 1800,
 		"Maximum duration in seconds the job is allowed to run before termination.")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false,
+		"Generate and display the Kubernetes manifests without applying them.")
 }
 
 func setupViper() *viper.Viper {
@@ -62,6 +64,7 @@ func buildConfig() *config.Config {
 	v.SetDefault("backoffLimit", int32(1))
 	v.SetDefault("activeDeadlineS", int64(1800))
 	v.SetDefault("debug", false)
+	v.SetDefault("dryRun", false)
 
 	if projectRoot != "." {
 		v.Set("projectRoot", projectRoot)
@@ -87,6 +90,9 @@ func buildConfig() *config.Config {
 	if activeDeadline != 1800 {
 		v.Set("activeDeadlineS", activeDeadline)
 	}
+	if dryRun {
+		v.Set("dryRun", dryRun)
+	}
 
 	if debug {
 		fmt.Printf("Setting config values:\n")
@@ -94,6 +100,7 @@ func buildConfig() *config.Config {
 		fmt.Printf("  clusterWorkspacePath: %s\n", workspacePath)
 		fmt.Printf("  image: %s\n", image)
 		fmt.Printf("  testCommand: %s\n", testCommand)
+		fmt.Printf("  dryRun: %t\n", dryRun)
 	}
 
 	cfg, err := config.LoadFromViper(v)
@@ -108,6 +115,7 @@ func buildConfig() *config.Config {
 			Debug:           debug,
 			TestCommand:     testCommand,
 			KeepTestRunner:  keepNamespace,
+			DryRun:          dryRun,
 		}
 	}
 

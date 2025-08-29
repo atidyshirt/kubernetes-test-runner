@@ -3,10 +3,13 @@ package launcher
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"testrunner/pkg/config"
 	"testrunner/pkg/kube"
 	"testrunner/pkg/logger"
+
+	"sigs.k8s.io/yaml"
 )
 
 // TestExecutionError represents a test execution failure with an exit code
@@ -27,6 +30,10 @@ func Run(cfg config.Config) error {
 
 	if cfg.Debug {
 		logger.SetGlobalLevel(logger.DEBUG)
+	}
+
+	if cfg.DryRun {
+		return runDryRun(cfg)
 	}
 
 	client, err := kube.NewClient()
@@ -76,5 +83,51 @@ func Run(cfg config.Config) error {
 		}
 	}
 
+	return nil
+}
+
+func runDryRun(cfg config.Config) error {
+	logger.LauncherLogger.Info("DRY RUN MODE - Generating manifests without applying")
+
+	namespace := kube.GenerateTestNamespace(cfg.ProjectRoot)
+	logger.LauncherLogger.Info("Would create namespace: %s", namespace)
+
+	// Generate all manifests
+	manifests, err := kube.GenerateTestManifests(cfg, namespace)
+	if err != nil {
+		return fmt.Errorf("failed to generate test manifests: %w", err)
+	}
+
+	// Convert all manifests to YAML
+	nsYAML, err := yaml.Marshal(manifests.Namespace)
+	if err != nil {
+		return fmt.Errorf("failed to marshal namespace to YAML: %w", err)
+	}
+
+	saYAML, err := yaml.Marshal(manifests.ServiceAccount)
+	if err != nil {
+		return fmt.Errorf("failed to marshal service account to YAML: %w", err)
+	}
+
+	roleYAML, err := yaml.Marshal(manifests.Role)
+	if err != nil {
+		return fmt.Errorf("failed to marshal role to YAML: %w", err)
+	}
+
+	roleBindingYAML, err := yaml.Marshal(manifests.RoleBinding)
+	if err != nil {
+		return fmt.Errorf("failed to marshal role binding to YAML: %w", err)
+	}
+
+	jobYAML, err := yaml.Marshal(manifests.Job)
+	if err != nil {
+		return fmt.Errorf("failed to marshal job to YAML: %w", err)
+	}
+
+	// Output all manifests to stdout
+	fmt.Fprintf(os.Stdout, "---\n%s\n---\n%s\n---\n%s\n---\n%s\n---\n%s\n",
+		string(nsYAML), string(saYAML), string(roleYAML), string(roleBindingYAML), string(jobYAML))
+
+	logger.LauncherLogger.Info("DRY RUN COMPLETE - No resources were created")
 	return nil
 }

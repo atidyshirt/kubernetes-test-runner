@@ -17,6 +17,7 @@ type Config struct {
 	BackoffLimit    int32           `mapstructure:"backoffLimit" yaml:"backoffLimit" json:"backoffLimit"`
 	ActiveDeadlineS int64           `mapstructure:"activeDeadlineS" yaml:"activeDeadlineS" json:"activeDeadlineS"`
 	WorkspacePath   string          `mapstructure:"clusterWorkspacePath" yaml:"clusterWorkspacePath" json:"clusterWorkspacePath"`
+	DryRun          bool            `mapstructure:"dryRun" yaml:"dryRun" json:"dryRun"`
 	Ctx             context.Context `mapstructure:"-" yaml:"-" json:"-"`
 }
 

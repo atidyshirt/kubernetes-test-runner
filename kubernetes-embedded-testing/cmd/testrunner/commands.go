@@ -24,6 +24,9 @@ and runs the specified test command.`,
 	launchCmd := createLaunchCommand(ctx)
 	rootCmd.AddCommand(launchCmd)
 
+	manifestCmd := createManifestCommand(ctx)
+	rootCmd.AddCommand(manifestCmd)
+
 	return rootCmd
 }
 
@@ -67,6 +70,44 @@ func executeLaunch(ctx context.Context) error {
 			return fmt.Errorf("test execution failed with exit code %d: %s", testErr.ExitCode, testErr.Message)
 		}
 		return fmt.Errorf("launch failed: %w", err)
+	}
+	return nil
+}
+
+// createManifestCommand creates the manifest command
+func createManifestCommand(ctx context.Context) *cobra.Command {
+	manifestCmd := &cobra.Command{
+		Use:   "manifest",
+		Short: "Generate Kubernetes manifests for tests",
+		Long: "Generate Kubernetes manifests that would be applied when running tests. " +
+			"This command outputs the YAML manifests to stdout without applying them to the cluster.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeManifest(ctx)
+		},
+		SilenceUsage:  true,
+		SilenceErrors: true,
+	}
+
+	// Add manifest-specific flags (same as launch command)
+	addLaunchFlags(manifestCmd)
+
+	return manifestCmd
+}
+
+// executeManifest handles the manifest command execution
+func executeManifest(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("operation cancelled")
+	default:
+	}
+
+	cfg := buildConfig()
+	cfg.Ctx = ctx
+	cfg.DryRun = true // Force dry run mode for manifest command
+
+	if err := launcher.Run(*cfg); err != nil {
+		return fmt.Errorf("manifest generation failed: %w", err)
 	}
 	return nil
 }
