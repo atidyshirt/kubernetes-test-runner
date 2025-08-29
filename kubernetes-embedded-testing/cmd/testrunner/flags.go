@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testrunner/pkg/config"
 
 	"github.com/spf13/cobra"
@@ -48,6 +49,9 @@ func setupViper() *viper.Viper {
 			// Only log error if it's not a "file not found" error
 			// This allows the tool to work without a config file
 		}
+	} else {
+		// Config file was found and read successfully
+		fmt.Printf("Config file loaded: %s\n", v.ConfigFileUsed())
 	}
 
 	return v
@@ -56,7 +60,6 @@ func setupViper() *viper.Viper {
 func buildConfig() *config.Config {
 	v := setupViper()
 
-	// Set defaults
 	v.SetDefault("mode", "launch")
 	v.SetDefault("image", "ket-test-runner:latest")
 	v.SetDefault("projectRoot", ".")
@@ -65,19 +68,41 @@ func buildConfig() *config.Config {
 	v.SetDefault("activeDeadlineS", int64(1800))
 	v.SetDefault("debug", false)
 
-	// Override with command line flags
-	v.Set("projectRoot", projectRoot)
-	v.Set("clusterWorkspacePath", workspacePath)
-	v.Set("debug", debug)
-	v.Set("image", image)
-	v.Set("testCommand", testCommand)
-	v.Set("keepNamespace", keepNamespace)
-	v.Set("backoffLimit", backoffLimit)
-	v.Set("activeDeadlineS", activeDeadline)
+	if projectRoot != "." {
+		v.Set("projectRoot", projectRoot)
+	}
+	if workspacePath != "/workspace" {
+		v.Set("clusterWorkspacePath", workspacePath)
+	}
+	if debug {
+		v.Set("debug", debug)
+	}
+	if image != "ket-test-runner:latest" {
+		v.Set("image", image)
+	}
+	if testCommand != "" {
+		v.Set("testCommand", testCommand)
+	}
+	if keepNamespace {
+		v.Set("keepNamespace", keepNamespace)
+	}
+	if backoffLimit != 1 {
+		v.Set("backoffLimit", backoffLimit)
+	}
+	if activeDeadline != 1800 {
+		v.Set("activeDeadlineS", activeDeadline)
+	}
+
+	if debug {
+		fmt.Printf("Setting config values:\n")
+		fmt.Printf("  projectRoot: %s\n", projectRoot)
+		fmt.Printf("  clusterWorkspacePath: %s\n", workspacePath)
+		fmt.Printf("  image: %s\n", image)
+		fmt.Printf("  testCommand: %s\n", testCommand)
+	}
 
 	cfg, err := config.LoadFromViper(v)
 	if err != nil {
-		// Fallback to basic config if Viper fails
 		cfg = &config.Config{
 			Mode:            "launch",
 			Image:           image,

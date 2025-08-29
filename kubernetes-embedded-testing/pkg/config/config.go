@@ -16,7 +16,7 @@ type Config struct {
 	KeepTestRunner  bool            `mapstructure:"keepNamespace" yaml:"keepNamespace" json:"keepNamespace"`
 	BackoffLimit    int32           `mapstructure:"backoffLimit" yaml:"backoffLimit" json:"backoffLimit"`
 	ActiveDeadlineS int64           `mapstructure:"activeDeadlineS" yaml:"activeDeadlineS" json:"activeDeadlineS"`
-	WorkspacePath   string          `mapstructure:"kindWorkspacePath" yaml:"kindWorkspacePath" json:"kindWorkspacePath"`
+	WorkspacePath   string          `mapstructure:"clusterWorkspacePath" yaml:"clusterWorkspacePath" json:"clusterWorkspacePath"`
 	Ctx             context.Context `mapstructure:"-" yaml:"-" json:"-"`
 }
 
