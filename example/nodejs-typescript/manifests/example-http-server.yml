@@ -35,7 +35,7 @@ spec:
         - containerPort: 3000
         workingDir: /app
         command: ["node"]
-        args: ["dist/example-http-server.js"]
+        args: ["example-http-server.js"]
         env:
         - name: PORT
           value: "3000"

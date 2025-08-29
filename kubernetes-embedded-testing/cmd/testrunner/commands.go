@@ -19,10 +19,8 @@ in Kubernetes environments. It creates an isolated namespace, deploys your sourc
 and runs the specified test command.`,
 	}
 
-	// Add root flags
 	addRootFlags(rootCmd)
 
-	// Add launch command
 	launchCmd := createLaunchCommand(ctx)
 	rootCmd.AddCommand(launchCmd)
 
@@ -42,6 +40,9 @@ func createLaunchCommand(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeLaunch(ctx)
 		},
+		// Disable help display on errors since test failures are expected
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	// Add launch-specific flags
@@ -61,9 +62,7 @@ func executeLaunch(ctx context.Context) error {
 	cfg := buildConfig()
 	cfg.Ctx = ctx
 	if err := launcher.Run(*cfg); err != nil {
-		// Check if this is a test execution error with an exit code
 		if testErr, ok := err.(*launcher.TestExecutionError); ok {
-			// Store the exit code for the main function to use
 			testExitCode = testErr.ExitCode
 			return fmt.Errorf("test execution failed with exit code %d: %s", testErr.ExitCode, testErr.Message)
 		}

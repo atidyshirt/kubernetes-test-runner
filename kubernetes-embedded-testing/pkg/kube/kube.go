@@ -94,11 +94,14 @@ func getPodExitCode(ctx context.Context, client *kubernetes.Clientset, jobName, 
 
 // StreamTestOutputToHost streams the test output from the injected test runner pod back to the host machine
 func StreamTestOutputToHost(ctx context.Context, client *kubernetes.Clientset, job *batchv1.Job) error {
-	logger.KubeLogger.Debug("Attempting to stream test output from job %s...", job.Name)
+	logger.KubeLogger.Info("Waiting for test runner pod to be ready...")
 
-	timeout := time.After(60 * time.Second)
-	ticker := time.NewTicker(1 * time.Second)
+	timeout := time.After(120 * time.Second)  // Increased timeout for image pulling
+	ticker := time.NewTicker(2 * time.Second) // Reduced frequency to avoid spam
 	defer ticker.Stop()
+
+	lastStatus := ""
+	attempts := 0
 
 	for {
 		select {
@@ -107,6 +110,7 @@ func StreamTestOutputToHost(ctx context.Context, client *kubernetes.Clientset, j
 		case <-timeout:
 			return fmt.Errorf("timeout waiting for Test Runner Job %s to become active", job.Name)
 		case <-ticker.C:
+			attempts++
 			pods, err := client.CoreV1().Pods(job.Namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: "job-name=" + job.Name,
 			})
@@ -117,16 +121,63 @@ func StreamTestOutputToHost(ctx context.Context, client *kubernetes.Clientset, j
 
 			if len(pods.Items) > 0 {
 				pod := pods.Items[0]
-				logger.KubeLogger.Debug("Found pod %s for job %s, starting output stream", pod.Name, job.Name)
+				currentStatus := getPodStatus(pod)
 
-				if err := streamPodLogs(ctx, client, pod, job.Namespace); err != nil {
-					logger.KubeLogger.Warn("Failed to stream logs from pod %s: %v", pod.Name, err)
-					continue
+				// Only log status changes to avoid spam
+				if currentStatus != lastStatus {
+					logger.KubeLogger.Info("Pod %s status: %s", pod.Name, currentStatus)
+					lastStatus = currentStatus
 				}
-				return nil
+
+				// Check if pod is ready to stream logs
+				if isPodReadyForLogs(pod) {
+					logger.KubeLogger.Info("Pod %s is ready, starting log stream", pod.Name)
+					if err := streamPodLogs(ctx, client, pod, job.Namespace); err != nil {
+						logger.KubeLogger.Warn("Failed to stream logs from pod %s: %v", pod.Name, err)
+						continue
+					}
+					return nil
+				}
+			} else if attempts%5 == 0 { // Log every 10 seconds (5 * 2 second ticker)
+				logger.KubeLogger.Info("Waiting for pod to be created...")
 			}
 		}
 	}
+}
+
+// getPodStatus returns a human-readable status of the pod
+func getPodStatus(pod corev1.Pod) string {
+	if len(pod.Status.ContainerStatuses) == 0 {
+		return "ContainerCreating"
+	}
+
+	containerStatus := pod.Status.ContainerStatuses[0]
+	if containerStatus.State.Waiting != nil {
+		if containerStatus.State.Waiting.Reason == "ContainerCreating" {
+			return "ContainerCreating"
+		}
+		return fmt.Sprintf("Waiting: %s", containerStatus.State.Waiting.Reason)
+	}
+
+	if containerStatus.State.Running != nil {
+		return "Running"
+	}
+
+	if containerStatus.State.Terminated != nil {
+		return fmt.Sprintf("Terminated: %s", containerStatus.State.Terminated.Reason)
+	}
+
+	return "Unknown"
+}
+
+// isPodReadyForLogs checks if the pod is ready to stream logs from
+func isPodReadyForLogs(pod corev1.Pod) bool {
+	if len(pod.Status.ContainerStatuses) == 0 {
+		return false
+	}
+
+	containerStatus := pod.Status.ContainerStatuses[0]
+	return containerStatus.State.Running != nil && containerStatus.Ready
 }
 
 // streamPodLogs attempts to stream logs from a specific pod

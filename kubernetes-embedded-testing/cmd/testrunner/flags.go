@@ -46,12 +46,7 @@ func setupViper() *viper.Viper {
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			// Only log error if it's not a "file not found" error
-			// This allows the tool to work without a config file
 		}
-	} else {
-		// Config file was found and read successfully
-		fmt.Printf("Config file loaded: %s\n", v.ConfigFileUsed())
 	}
 
 	return v

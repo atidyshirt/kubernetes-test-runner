@@ -18,10 +18,11 @@
     "test:internal:mocha-integration": "mocha -r ts-node/register",
     "test:internal:mocha-integration:watch": "mocha -r ts-node/register --watch --watch-files src/**/*.ts,test/**/*.ts",
 
-    "cluster:start": "kind create cluster --name ket-test --config kind-config.yaml",
-    "cluster:stop": "kind delete cluster --name ket-test",
+    "cluster:init": "npm run cluster:stop && npm run cluster:start && npm run cluster:load-example-http-server-image",
+    "cluster:load-example-http-server-image": "kind load docker-image example-http-server:latest --name ket-test",
 
-    "docker:build-test-runner": "docker build -t kubernetes-embedded-test-runner-node:latest ../../kubernetes-embedded-testing"
+    "cluster:start": "kind create cluster --name ket-test --config kind-config.yaml",
+    "cluster:stop": "kind delete cluster --name ket-test"
   },
   "dependencies": {
     "axios": "^1.6.0",
