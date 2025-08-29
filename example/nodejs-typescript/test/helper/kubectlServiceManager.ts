@@ -42,7 +42,7 @@ export class KubectlServiceManager {
         // Pod might not exist yet
       }
       
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
     throw new Error(`Pod with label ${podLabel} not ready within ${timeout}ms`);
@@ -56,15 +56,16 @@ export class KubectlServiceManager {
         const { stdout } = await execAsync(
           `kubectl get endpoints -n ${this.namespace} ${serviceName} -o jsonpath='{.subsets[0].addresses}'`
         );
-        
-        if (stdout.trim() !== '') {
+        if (stdout.trim() !== '' && stdout.includes('ip')) {
+          console.log(`Service ${serviceName} is ready`);
           return;
         }
       } catch (error) {
+        console.log(`Service ${serviceName} check error: ${error}`);
         // Service might not exist yet
       }
       
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
     throw new Error(`Service ${serviceName} not ready within ${timeout}ms`);

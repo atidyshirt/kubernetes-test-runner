@@ -1,9 +1,5 @@
 mode: launch
 projectRoot: .
 image: ket-test-runner:latest
-debug: false
-testCommand: "npm run test:internal:mocha-integration --exit"
-keepNamespace: false
-backoffLimit: 1
-activeDeadlineS: 1800
-kindWorkspacePath: /workspace
+testCommand: "npm run test:internal:mocha-integration"
+clusterWorkspacePath: /workspace

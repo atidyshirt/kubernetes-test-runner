@@ -46,7 +46,8 @@ func CreateJob(ctx context.Context, client *kubernetes.Clientset, cfg config.Con
 			ActiveDeadlineSeconds: &cfg.ActiveDeadlineS,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
+					ServiceAccountName: "default",
+					RestartPolicy:      corev1.RestartPolicyNever,
 					Volumes: []corev1.Volume{
 						{
 							Name: "source-code",

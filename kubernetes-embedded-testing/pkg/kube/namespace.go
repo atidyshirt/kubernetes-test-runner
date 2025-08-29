@@ -75,6 +75,13 @@ func CreateNamespace(ctx context.Context, client *kubernetes.Clientset, name str
 	}
 
 	logger.KubeLogger.Info("Successfully created test namespace: %s", name)
+
+	// Create RBAC resources for the test namespace
+	if err := CreateTestNamespaceRBAC(ctx, client, name); err != nil {
+		logger.KubeLogger.Warn("Failed to create RBAC resources: %v", err)
+		// Don't fail the namespace creation for RBAC issues
+	}
+
 	return name, nil
 }
 

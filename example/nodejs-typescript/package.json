@@ -11,8 +11,9 @@
     "dev": "ts-node src/example-http-server.ts",
 
     "test:unit": "mocha -r ts-node/register test/unit/**/*.spec.ts",
-    "test:integration": "ket launch --config ket-config.yaml",
-    "test:integration:watch": "ket launch --config ket-config.yaml --test-command 'npm run test:internal:mocha-integration:watch'",
+    "test:integration": "ket launch",
+    "test:integration:watch": "ket launch --test-command 'npm run test:internal:mocha-integration:watch'",
+    "test:integration:debug": "ket launch --debug --keep-namespace",
 
     "test:internal:mocha-integration": "mocha -r ts-node/register test/integration/**/*.spec.ts",
     "test:internal:mocha-integration:watch": "mocha -r ts-node/register --watch --watch-files src/**/*.ts,test/**/*.ts test/integration/**/*.spec.ts",
@@ -20,13 +21,8 @@
     "cluster:start": "kind create cluster --name ket-test --config kind-config.yaml",
     "cluster:stop": "kind delete cluster --name ket-test",
     "cluster:restart": "npm run cluster:stop && npm run cluster:start",
-    "cluster:status": "kind get clusters",
-    "cluster:create-ns": "kubectl create namespace test-namespace",
-    "cluster:fix-rbac": "kubectl create clusterrolebinding ket-test-admin --clusterrole=cluster-admin --serviceaccount=ket-system:default --dry-run=client -o yaml | kubectl apply -f -",
-    "cluster:fix-rbac:all": "kubectl create clusterrolebinding ket-cluster-admin --clusterrole=cluster-admin --group=system:serviceaccounts --dry-run=client -o yaml | kubectl apply -f -",
 
-    "docker:build": "docker build -t ket-test-runner ../../kubernetes-embedded-testing",
-    "docker:build:local": "docker build -t ket-test-runner ."
+    "docker:build-test-runner": "docker build -t ket-test-runner ../../kubernetes-embedded-testing"
   },
   "dependencies": {
     "axios": "^1.6.0",

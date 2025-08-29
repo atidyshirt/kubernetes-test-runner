@@ -1,21 +1,17 @@
 import { expect } from 'chai';
 import axios from 'axios';
 import { TestContainer } from '../helper/testContainer';
+import { getGlobalTestContainer, testEnvironment } from '../setup';
 import 'mocha';
 
 describe('Example HTTP Server Integration Tests', () => {
   let testContainer: TestContainer;
-  const namespace = 'test-namespace';
+  const namespace = testEnvironment.namespace;
+  const baseUrl = `http://example-http-server.${namespace}.svc.cluster.local:3000`;
 
   before(async () => {
-    testContainer = new TestContainer(namespace);
-    await testContainer.setup();
-  });
-
-  const baseUrl = 'http://example-http-server.test-namespace.svc.cluster.local:3000';
-
-  after(async () => {
-    await testContainer.teardown();
+    console.log(`Starting integration tests in namespace: ${namespace}`);
+    testContainer = getGlobalTestContainer();
   });
 
   beforeEach(async () => {
