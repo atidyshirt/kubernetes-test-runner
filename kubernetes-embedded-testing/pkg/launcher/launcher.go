@@ -87,6 +87,11 @@ func Run(cfg config.Config) error {
 }
 
 func runDryRun(cfg config.Config) error {
+	// Set log level to SILENT in manifest mode for clean output
+	if cfg.ManifestMode {
+		logger.SetGlobalLevel(logger.SILENT)
+	}
+
 	logger.LauncherLogger.Info("DRY RUN MODE - Generating manifests without applying")
 
 	namespace := kube.GenerateTestNamespace(cfg.ProjectRoot)

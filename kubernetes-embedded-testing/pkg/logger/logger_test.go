@@ -96,12 +96,7 @@ func TestLogger_ComponentPrefixes(t *testing.T) {
 	}{
 		{"LAUNCHER", LAUNCHER, LAUNCHER},
 		{"KUBE", KUBE, KUBE},
-		{"RUNNER", RUNNER, RUNNER},
-		{"MOCHA", MOCHA, MOCHA},
-		{"NPM", NPM, NPM},
-		{"MIRRORD", MIRRORD, MIRRORD},
 		{"TESTRUNNER", TESTRUNNER, TESTRUNNER},
-		{"POD", POD, POD},
 	}
 
 	for _, tt := range tests {
@@ -121,8 +116,8 @@ func TestGlobalLoggers(t *testing.T) {
 	if KubeLogger.component != KUBE {
 		t.Errorf("expected KubeLogger component KUBE, got %v", KubeLogger.component)
 	}
-	if RunnerLogger.component != RUNNER {
-		t.Errorf("expected RunnerLogger component RUNNER, got %v", RunnerLogger.component)
+	if TestRunnerLogger.component != TESTRUNNER {
+		t.Errorf("expected TestRunnerLogger component TESTRUNNER, got %v", TestRunnerLogger.component)
 	}
 }
 
@@ -134,8 +129,8 @@ func TestSetGlobalLevel(t *testing.T) {
 	if KubeLogger.level != DEBUG {
 		t.Errorf("expected KubeLogger level DEBUG, got %v", KubeLogger.level)
 	}
-	if RunnerLogger.level != DEBUG {
-		t.Errorf("expected RunnerLogger level DEBUG, got %v", RunnerLogger.level)
+	if TestRunnerLogger.level != DEBUG {
+		t.Errorf("expected TestRunnerLogger level DEBUG, got %v", TestRunnerLogger.level)
 	}
 
 	SetGlobalLevel(INFO)

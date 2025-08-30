@@ -18,6 +18,7 @@ type Config struct {
 	ActiveDeadlineS int64           `mapstructure:"activeDeadlineS" yaml:"activeDeadlineS" json:"activeDeadlineS"`
 	WorkspacePath   string          `mapstructure:"clusterWorkspacePath" yaml:"clusterWorkspacePath" json:"clusterWorkspacePath"`
 	DryRun          bool            `mapstructure:"dryRun" yaml:"dryRun" json:"dryRun"`
+	ManifestMode    bool            `mapstructure:"manifestMode" yaml:"manifestMode" json:"manifestMode"`
 	Ctx             context.Context `mapstructure:"-" yaml:"-" json:"-"`
 }
 

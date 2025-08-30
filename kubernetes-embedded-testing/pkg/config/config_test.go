@@ -7,15 +7,15 @@ import (
 
 func TestConfigStructure(t *testing.T) {
 	cfg := Config{
-		Mode:              "launch",
-		ProjectRoot:       ".",
-		Image:             "node:18-alpine",
-		Debug:             false,
-		TestCommand:       "npm test",
-		KeepTestRunner:     false,
-		BackoffLimit:      1,
-		ActiveDeadlineS:   1800,
-		WorkspacePath: "/workspace",
+		Mode:            "launch",
+		ProjectRoot:     ".",
+		Image:           "node:18-alpine",
+		Debug:           false,
+		TestCommand:     "npm test",
+		KeepTestRunner:  false,
+		BackoffLimit:    1,
+		ActiveDeadlineS: 1800,
+		WorkspacePath:   "/workspace",
 	}
 
 	if cfg.Mode != "launch" {
@@ -35,7 +35,7 @@ func TestConfigStructure(t *testing.T) {
 	}
 
 	if cfg.WorkspacePath != "/workspace" {
-		t.Errorf("Expected KindWorkspacePath to be '/workspace', got %s", cfg.WorkspacePath)
+		t.Errorf("Expected WorkspacePath to be '/workspace', got %s", cfg.WorkspacePath)
 	}
 }
 
@@ -54,7 +54,7 @@ testCommand: "npm run test:integration"
 keepNamespace: true
 backoffLimit: 3
 activeDeadlineS: 3600
-kindWorkspacePath: /custom/workspace`
+clusterWorkspacePath: /custom/workspace`
 
 	if _, err := tempFile.WriteString(configContent); err != nil {
 		t.Fatalf("Failed to write config content: %v", err)
@@ -99,7 +99,7 @@ kindWorkspacePath: /custom/workspace`
 	}
 
 	if cfg.WorkspacePath != "/custom/workspace" {
-		t.Errorf("Expected KindWorkspacePath to be '/custom/workspace', got %s", cfg.WorkspacePath)
+		t.Errorf("Expected WorkspacePath to be '/custom/workspace', got %s", cfg.WorkspacePath)
 	}
 }
 
@@ -119,45 +119,45 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "valid config",
 			config: Config{
-				Mode:              "launch",
-				ProjectRoot:       ".",
-				Image:             "node:18-alpine",
-				Debug:             false,
-				TestCommand:       "npm test",
-				KeepTestRunner:     false,
-				BackoffLimit:      1,
-				ActiveDeadlineS:   1800,
-				WorkspacePath: "/workspace",
+				Mode:            "launch",
+				ProjectRoot:     ".",
+				Image:           "node:18-alpine",
+				Debug:           false,
+				TestCommand:     "npm test",
+				KeepTestRunner:  false,
+				BackoffLimit:    1,
+				ActiveDeadlineS: 1800,
+				WorkspacePath:   "/workspace",
 			},
 			shouldError: false,
 		},
 		{
 			name: "missing test command",
 			config: Config{
-				Mode:              "launch",
-				ProjectRoot:       ".",
-				Image:             "node:18-alpine",
-				Debug:             false,
-				TestCommand:       "",
-				KeepTestRunner:     false,
-				BackoffLimit:      1,
-				ActiveDeadlineS:   1800,
-				WorkspacePath: "/workspace",
+				Mode:            "launch",
+				ProjectRoot:     ".",
+				Image:           "node:18-alpine",
+				Debug:           false,
+				TestCommand:     "",
+				KeepTestRunner:  false,
+				BackoffLimit:    1,
+				ActiveDeadlineS: 1800,
+				WorkspacePath:   "/workspace",
 			},
 			shouldError: true,
 		},
 		{
 			name: "missing image",
 			config: Config{
-				Mode:              "launch",
-				ProjectRoot:       ".",
-				Image:             "",
-				Debug:             false,
-				TestCommand:       "npm test",
-				KeepTestRunner:     false,
-				BackoffLimit:      1,
-				ActiveDeadlineS:   1800,
-				WorkspacePath: "/workspace",
+				Mode:            "launch",
+				ProjectRoot:     ".",
+				Image:           "",
+				Debug:           false,
+				TestCommand:     "npm test",
+				KeepTestRunner:  false,
+				BackoffLimit:    1,
+				ActiveDeadlineS: 1800,
+				WorkspacePath:   "/workspace",
 			},
 			shouldError: true,
 		},

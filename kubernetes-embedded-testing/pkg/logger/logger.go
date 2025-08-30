@@ -12,6 +12,7 @@ const (
 	INFO
 	WARN
 	ERROR
+	SILENT
 )
 
 func (l LogLevel) String() string {
@@ -24,6 +25,8 @@ func (l LogLevel) String() string {
 		return "WARN"
 	case ERROR:
 		return "ERROR"
+	case SILENT:
+		return "SILENT"
 	default:
 		return "UNKNOWN"
 	}
@@ -34,12 +37,7 @@ type Component string
 const (
 	LAUNCHER   Component = "LAUNCHER"
 	KUBE       Component = "KUBE"
-	RUNNER     Component = "RUNNER"
-	MOCHA      Component = "MOCHA"
-	NPM        Component = "NPM"
-	MIRRORD    Component = "MIRRORD"
 	TESTRUNNER Component = "TESTRUNNER"
-	POD        Component = "POD"
 )
 
 type Logger struct {
@@ -65,25 +63,25 @@ func (l *Logger) formatMessage(level LogLevel, format string, args ...interface{
 }
 
 func (l *Logger) Debug(format string, args ...interface{}) {
-	if l.level <= DEBUG {
+	if l.level <= DEBUG && l.level != SILENT {
 		fmt.Println(l.formatMessage(DEBUG, format, args...))
 	}
 }
 
 func (l *Logger) Info(format string, args ...interface{}) {
-	if l.level <= INFO {
+	if l.level <= INFO && l.level != SILENT {
 		fmt.Println(l.formatMessage(INFO, format, args...))
 	}
 }
 
 func (l *Logger) Warn(format string, args ...interface{}) {
-	if l.level <= WARN {
+	if l.level <= WARN && l.level != SILENT {
 		fmt.Println(l.formatMessage(WARN, format, args...))
 	}
 }
 
 func (l *Logger) Error(format string, args ...interface{}) {
-	if l.level <= ERROR {
+	if l.level <= ERROR && l.level != SILENT {
 		fmt.Println(l.formatMessage(ERROR, format, args...))
 	}
 }
@@ -91,19 +89,11 @@ func (l *Logger) Error(format string, args ...interface{}) {
 func SetGlobalLevel(level LogLevel) {
 	LauncherLogger.SetLevel(level)
 	KubeLogger.SetLevel(level)
-	RunnerLogger.SetLevel(level)
+	TestRunnerLogger.SetLevel(level)
 }
 
 var (
-	LauncherLogger = New(LAUNCHER)
-	KubeLogger     = New(KUBE)
-	RunnerLogger   = New(RUNNER)
+	LauncherLogger   = New(LAUNCHER)
+	KubeLogger       = New(KUBE)
+	TestRunnerLogger = New(TESTRUNNER)
 )
-
-func UnifiedLog(level LogLevel, component, format string, args ...interface{}) {
-	timestamp := time.Now().Format("2006/01/02 15:04:05")
-	levelStr := level.String()
-
-	message := fmt.Sprintf(format, args...)
-	fmt.Printf("[%s] [%s] [%s] %s\n", timestamp, levelStr, component, message)
-}

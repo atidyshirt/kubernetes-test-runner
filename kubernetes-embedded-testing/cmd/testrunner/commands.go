@@ -104,7 +104,8 @@ func executeManifest(ctx context.Context) error {
 
 	cfg := buildConfig()
 	cfg.Ctx = ctx
-	cfg.DryRun = true // Force dry run mode for manifest command
+	cfg.DryRun = true       // Force dry run mode for manifest command
+	cfg.ManifestMode = true // Enable manifest mode for clean output
 
 	if err := launcher.Run(*cfg); err != nil {
 		return fmt.Errorf("manifest generation failed: %w", err)
