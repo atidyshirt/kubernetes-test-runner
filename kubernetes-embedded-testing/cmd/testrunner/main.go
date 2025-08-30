@@ -20,6 +20,8 @@ var (
 	activeDeadline int64
 	dryRun         bool
 	testExitCode   int
+	logPrefix      bool
+	logTimestamp   bool
 )
 
 func main() {

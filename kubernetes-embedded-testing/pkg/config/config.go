@@ -7,6 +7,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+type LoggingConfig struct {
+	Prefix    bool `mapstructure:"prefix" yaml:"prefix" json:"prefix"`
+	Timestamp bool `mapstructure:"timestamp" yaml:"timestamp" json:"timestamp"`
+}
+
 type Config struct {
 	Mode            string          `mapstructure:"mode" yaml:"mode" json:"mode"`
 	ProjectRoot     string          `mapstructure:"projectRoot" yaml:"projectRoot" json:"projectRoot"`
@@ -19,6 +24,7 @@ type Config struct {
 	WorkspacePath   string          `mapstructure:"clusterWorkspacePath" yaml:"clusterWorkspacePath" json:"clusterWorkspacePath"`
 	DryRun          bool            `mapstructure:"dryRun" yaml:"dryRun" json:"dryRun"`
 	ManifestMode    bool            `mapstructure:"manifestMode" yaml:"manifestMode" json:"manifestMode"`
+	Logging         LoggingConfig   `mapstructure:"logging" yaml:"logging" json:"logging"`
 	Ctx             context.Context `mapstructure:"-" yaml:"-" json:"-"`
 }
 

@@ -3,8 +3,6 @@ package kube
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"time"
 
 	"testrunner/pkg/logger"
@@ -194,18 +192,7 @@ func streamPodLogs(ctx context.Context, client *kubernetes.Clientset, pod corev1
 	}
 	defer stream.Close()
 
-	done := make(chan error, 1)
-
-	go func() {
-		_, err := io.Copy(os.Stdout, stream)
-		done <- err
-	}()
-
-	select {
-	case <-ctx.Done():
-		logger.KubeLogger.Debug("Context cancelled, stopping output stream")
-		return ctx.Err()
-	case err := <-done:
-		return err
-	}
+	// Use TestRunnerLogger to stream logs with proper prefixing
+	logger.TestRunnerLogger.StreamLogs(stream)
+	return nil
 }

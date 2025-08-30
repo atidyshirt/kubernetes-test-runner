@@ -28,6 +28,9 @@ func Run(cfg config.Config) error {
 		ctx = cfg.Ctx
 	}
 
+	// Configure logging from config
+	logger.ConfigureFromConfig(cfg.Logging.Prefix, cfg.Logging.Timestamp)
+
 	if cfg.Debug {
 		logger.SetGlobalLevel(logger.DEBUG)
 	}

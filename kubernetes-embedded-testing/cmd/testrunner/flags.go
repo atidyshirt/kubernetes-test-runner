@@ -13,9 +13,11 @@ func addRootFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVarP(&projectRoot, "project-root", "r", ".", "Project root path")
 	cmd.PersistentFlags().BoolVarP(&debug, "debug", "v", false, "Enable debug logging")
 	cmd.PersistentFlags().StringVarP(&workspacePath, "cluster-workspace-path", "w", "/workspace",
-		"Absolute path where the local project directory is mounted inside the test runner pod. "+
-			"Defaults to '/workspace', matching Kind/K3D volume mounts (e.g., '$(pwd):/workspace'). "+
+		"Absolute path where the local project directory is mounted inside the test runner pod.\n" +
+			"Defaults to '/workspace', matching Kind/K3D volume mounts (e.g., '$(pwd):/workspace').\n" +
 			"Used for syncing source code between local and cluster environments.")
+	cmd.PersistentFlags().BoolVarP(&logPrefix, "log-prefix", "", true, "Show log prefixes ([INFO] [LAUNCHER], etc.)")
+	cmd.PersistentFlags().BoolVarP(&logTimestamp, "log-timestamp", "", true, "Show timestamps in logs")
 }
 
 func addLaunchFlags(cmd *cobra.Command) {
@@ -92,6 +94,13 @@ func buildConfig() *config.Config {
 	}
 	if dryRun {
 		v.Set("dryRun", dryRun)
+	}
+
+	if !logPrefix {
+		v.Set("logging.prefix", false)
+	}
+	if !logTimestamp {
+		v.Set("logging.timestamp", false)
 	}
 
 	if debug {
