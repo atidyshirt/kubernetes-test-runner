@@ -42,8 +42,8 @@ func CreateTestNamespaceRBAC(ctx context.Context, client *kubernetes.Clientset, 
 			},
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods/log"},
-				Verbs:     []string{"get", "list"},
+				Resources: []string{ "pods/log", "pods/portforward", "pods/exec"},
+				Verbs:     []string{"get", "list", "create"},
 			},
 			{
 				APIGroups: []string{"apps"},
