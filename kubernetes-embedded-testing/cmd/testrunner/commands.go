@@ -64,7 +64,7 @@ func executeLaunch(ctx context.Context) error {
 
 	cfg := buildConfig()
 	cfg.Ctx = ctx
-	if err := launcher.Run(*cfg); err != nil {
+	if err := launcher.RunLaunch(*cfg); err != nil {
 		if testErr, ok := err.(*launcher.TestExecutionError); ok {
 			testExitCode = testErr.ExitCode
 			return fmt.Errorf("test execution failed with exit code %d: %s", testErr.ExitCode, testErr.Message)
@@ -104,10 +104,8 @@ func executeManifest(ctx context.Context) error {
 
 	cfg := buildConfig()
 	cfg.Ctx = ctx
-	cfg.DryRun = true       // Force dry run mode for manifest command
-	cfg.ManifestMode = true // Enable manifest mode for clean output
 
-	if err := launcher.Run(*cfg); err != nil {
+	if err := launcher.RunManifest(*cfg); err != nil {
 		return fmt.Errorf("manifest generation failed: %w", err)
 	}
 	return nil
