@@ -26,6 +26,8 @@ func addLaunchFlags(cmd *cobra.Command) {
 			"Must include dependencies for the test command (e.g., mocha or other test runners).")
 	cmd.Flags().StringVarP(&testCommand, "test-command", "t", "",
 		"Command to execute inside the test runner pod (e.g., 'mocha **/*.spec.ts').")
+	cmd.Flags().StringVarP(&namespacePrefix, "ns-prefix", "", "kubernetes-embedded-test",
+		"Prefix for the namespace name e.g. kubernetes-embedded-test-nodejs-example")
 	cmd.Flags().BoolVarP(&keepNamespace, "keep-namespace", "k", false,
 		"If set, the test namespace will not be deleted after the run for debugging purposes.")
 	cmd.Flags().Int32VarP(&backoffLimit, "backoff-limit", "b", 1,
@@ -54,11 +56,12 @@ func setupViper() *viper.Viper {
 	return v
 }
 
-func buildConfig() *config.Config {
+func buildConfig(cmd *cobra.Command) *config.Config {
 	v := setupViper()
 
 	v.SetDefault("mode", "launch")
 	v.SetDefault("image", "atidyshirt/kubernetes-embedded-test-runner-base:latest")
+	v.SetDefault("namespacePrefix", "kubernetes-embedded-test")
 	v.SetDefault("projectRoot", ".")
 	v.SetDefault("clusterWorkspacePath", "/workspace")
 	v.SetDefault("backoffLimit", int32(1))
@@ -70,6 +73,9 @@ func buildConfig() *config.Config {
 	}
 	if workspacePath != "/workspace" {
 		v.Set("clusterWorkspacePath", workspacePath)
+	}
+	if cmd != nil && cmd.Flags().Changed("ns-prefix") {
+		v.Set("namespacePrefix", namespacePrefix)
 	}
 	if debug {
 		v.Set("debug", debug)
@@ -101,6 +107,7 @@ func buildConfig() *config.Config {
 		fmt.Printf("Setting config values:\n")
 		fmt.Printf("  projectRoot: %s\n", projectRoot)
 		fmt.Printf("  clusterWorkspacePath: %s\n", workspacePath)
+		fmt.Printf("  namespacePrefix: %s\n", namespacePrefix)
 		fmt.Printf("  image: %s\n", image)
 		fmt.Printf("  testCommand: %s\n", testCommand)
 	}
@@ -112,11 +119,12 @@ func buildConfig() *config.Config {
 			Image:           image,
 			ProjectRoot:     projectRoot,
 			WorkspacePath:   workspacePath,
+			NamespacePrefix: namespacePrefix,
 			BackoffLimit:    backoffLimit,
 			ActiveDeadlineS: activeDeadline,
 			Debug:           debug,
 			TestCommand:     testCommand,
-			KeepNamespace:  keepNamespace,
+			KeepNamespace:   keepNamespace,
 		}
 	}
 

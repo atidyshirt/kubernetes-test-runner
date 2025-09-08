@@ -11,6 +11,7 @@ import (
 var (
 	configFile     string
 	projectRoot    string
+	namespacePrefix string
 	debug          bool
 	workspacePath  string
 	image          string
