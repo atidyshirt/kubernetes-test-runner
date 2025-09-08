@@ -9,19 +9,7 @@ import (
 )
 
 var (
-	configFile     string
-	projectRoot    string
-	namespacePrefix string
-	debug          bool
-	workspacePath  string
-	image          string
-	testCommand    string
-	keepNamespace  bool
-	backoffLimit   int32
-	activeDeadline int64
-	testExitCode   int
-	logPrefix      bool
-	logTimestamp   bool
+	testExitCode int
 )
 
 func main() {
