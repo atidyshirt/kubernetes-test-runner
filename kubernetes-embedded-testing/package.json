@@ -1,0 +1,24 @@
+{
+  "name": "kubernetes-embedded-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^24.10.6",
+    "typescript": "^5.9.3"
+  },
+  "types": "dist/index.d.ts",
+  "files": "dist",
+  "dependencies": {
+    "mongodb": "^7.0.0"
+  }
+}

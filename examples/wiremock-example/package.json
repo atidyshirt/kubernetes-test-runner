@@ -1,11 +1,10 @@
 {
-  "name": "example-harness-usage",
+  "name": "wiremock-example",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "kubernetes-embedded-testing": "file:../../kubernetes-embedded-testing"
     "axios": "^1.4.0",
-    "kubernetes-embedded-testing": "file:../../kubernetes-embedded-testing",
-    "nodemon": "^3.1.11"
   },
   "scripts": {
     "test": "mocha --config mocha.json"

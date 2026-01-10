@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "declaration": true
+  },
+  "include": [
+    "src"
+  ]
+}

@@ -2,7 +2,7 @@
 
 This guide outlines how to manage and test the WireMock example within a local [kind](kind.sigs.k8s.io) cluster using [DevSpace](devspace.sh).
 
-## 🚀 Workflows
+## Workflows
 
 ### 1. Prerequisites
 
