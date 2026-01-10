@@ -1,9 +1,9 @@
 import { before, after } from 'mocha';
 
 before(async function () {
-  console.log('Global before: do no work');
+  console.log('Global before: setup started');
 });
 
 after(async function () {
-  console.log('Global after: do no work');
+  console.log('Global after: teardown started');
 });

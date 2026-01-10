@@ -6,7 +6,7 @@ export class WiremockService {
     }
 
     private adminMappingsUrl(serviceName: string): string {
-        return `http://${serviceName}.${this.namespace}.svc.cluster.local:3000/__admin/mappings`;
+        return `http://${serviceName}.${this.namespace}.svc.cluster.local:8080/__admin/mappings`;
     }
 
     private async getAllMappings(serviceName: string) {
@@ -36,12 +36,11 @@ export class WiremockService {
         method: string,
         jsonBody: object,
     ): Promise<void> {
-        const uuid = await this.findMappingUuidByRequest(serviceName, endpoint, method);
-        if (uuid === null) {
-            throw new Error('Mapping not found');
-        }
-        const url = `${this.adminMappingsUrl(serviceName)}/${uuid}`;
-        const updatedMapping = {
+        const existingUuid = await this.findMappingUuidByRequest(serviceName, endpoint, method);
+        const url = existingUuid
+            ? `${this.adminMappingsUrl(serviceName)}/${existingUuid}`
+            : `${this.adminMappingsUrl(serviceName)}`;
+        const mapping = {
             request: {
                 url: endpoint,
                 method,
@@ -53,9 +52,9 @@ export class WiremockService {
             },
         };
         const response = await fetch(url, {
-            method: 'PUT',
+            method: existingUuid ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedMapping),
+            body: JSON.stringify(mapping),
         });
         if (!response.ok) {
             throw new Error(`Failed to update mapping: ${await response.text()}`);
@@ -63,7 +62,7 @@ export class WiremockService {
     }
 
     async resetMappings(serviceName: string): Promise<void> {
-        const url = `http://${serviceName}.${this.namespace}.svc.cluster.local:3000/__admin/mappings/reset`;
+        const url = `http://${serviceName}.${this.namespace}.svc.cluster.local:8080/__admin/mappings/reset`;
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

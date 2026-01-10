@@ -15,28 +15,6 @@ export class TestContainer {
         this.wiremockService = new WiremockService(namespace);
     }
 
-    private async resetMappings() {
-        await this.wiremockService.resetMappings('cpu-service');
-        await this.wiremockService.resetMappings('author-service');
-    }
-
-    async setup(): Promise<void> {
-        try {
-            await this.resetMappings();
-            await this.mongoService.connect();
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    async teardown(): Promise<void> {
-        try {
-            await this.resetMappings();
-        } catch (error) {
-            console.warn(`Warning: Failed to teardown test environment: ${error}`);
-        }
-    }
-
     async countStringInWorkloadLogs(workload: string, search: string): Promise<number> {
         return this.kubectl.countStringInWorkloadLogs(workload, search);
     }
@@ -60,9 +38,5 @@ export class TestContainer {
         jsonBody: object,
     ): Promise<void> {
         await this.wiremockService.updateMapping(serviceName, endpoint, method, jsonBody);
-    }
-
-    async afterEach(): Promise<void> {
-        await this.resetMappings();
     }
 }
