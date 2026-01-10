@@ -1,0 +1,9 @@
+{
+  "require": ["ts-node/register"],
+  "extension": ["ts"],
+  "spec": ["tests/**/*.spec.ts"],
+  "file": ["tests/setup.ts"],
+  "reporter": "spec",
+  "slow": "500",
+  "timeout": 2000
+}

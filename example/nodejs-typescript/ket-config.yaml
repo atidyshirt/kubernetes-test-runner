@@ -1,5 +1,0 @@
-mode: launch
-projectRoot: .
-image: atidyshirt/kubernetes-embedded-test-runner-node:latest
-testCommand: "npm run test:internal:mocha-integration"
-clusterWorkspacePath: /workspace

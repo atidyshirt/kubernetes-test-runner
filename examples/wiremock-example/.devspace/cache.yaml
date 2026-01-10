@@ -1,0 +1,3 @@
+lastContext:
+    namespace: test
+    context: kind-k8s-test-runner
