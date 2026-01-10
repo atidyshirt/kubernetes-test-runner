@@ -1,12 +1,13 @@
 {
-  "name": "kubernetes-embedded-testing",
+  "name": "@atidyshirt/kubernetes-embedded-testing",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -14,11 +15,31 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^24.10.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "semantic-release": "^24.0.0"
   },
   "types": "dist/index.d.ts",
   "files": "dist",
   "dependencies": {
     "mongodb": "^7.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "develop",
+        "channel": "next",
+        "prerelease": true
+      }
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/github"
+    ]
   }
 }

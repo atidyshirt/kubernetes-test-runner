@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "kubernetes-embedded-testing": "file:../../kubernetes-embedded-testing",
+    "@atidyshirt/kubernetes-embedded-testing": "file:../../kubernetes-embedded-testing",
     "axios": "^1.4.0"
   },
   "scripts": {

@@ -1,0 +1,36 @@
+name: Lint TypeScript
+
+description: Lints TypeScript files in the project
+
+inputs:
+  working-directory:
+    description: Working directory for the project
+    required: false
+    default: .
+  typescript-version:
+    description: TypeScript version to use
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install TypeScript
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm install -g typescript@${{ inputs.typescript-version }}
+
+    - name: Install project dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
+
+    - name: Run TypeScript compiler check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: tsc --noEmit
