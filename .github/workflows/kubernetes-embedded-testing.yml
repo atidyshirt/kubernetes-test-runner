@@ -3,8 +3,6 @@ name: Kubernetes Embedded Testing CI/CD
 on:
   push:
     branches: [main, develop]
-    paths:
-      - 'kubernetes-embedded-testing/**'
   pull_request:
     branches: [main, develop]
     paths:
