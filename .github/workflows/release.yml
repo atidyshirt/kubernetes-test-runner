@@ -2,6 +2,8 @@ name: Release
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   release:
@@ -11,6 +13,7 @@ jobs:
       issues: write
       pull-requests: write
       id-token: write
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,7 +22,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: './packages/devspace-testing-nodejs/package-lock.json'
 
       - name: Install & Build
         working-directory: ./packages/devspace-testing-nodejs
@@ -33,3 +37,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
