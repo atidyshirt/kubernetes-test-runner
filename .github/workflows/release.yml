@@ -1,12 +1,7 @@
 name: Release
-
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   release:
@@ -15,7 +10,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,40 +19,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: './packages/devspace-testing-nodejs/package-lock.json'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Build Package
+      - name: Install & Build
         working-directory: ./packages/devspace-testing-nodejs
         run: |
           npm ci
           npm run build
 
-      - name: Authenticate NPM
+      - name: Release and Publish
         working-directory: ./packages/devspace-testing-nodejs
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-
-      - name: Run semantic-release
-        uses: go-semantic-release/action@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          custom-arguments: "--version-file"
+        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CWD: ./packages/devspace-testing-nodejs
-
-      - name: Publish to NPM
-        working-directory: ./packages/devspace-testing-nodejs
-        run: |
-          if [ -f package.json ]; then
-            NEW_VERSION=$(cat package.json | jq .version)
-            echo "New version detected: $NEW_VERSION"
-
-            npm version $NEW_VERSION --no-git-tag-version
-            npm publish --access public
-          else
-            echo "No new version detected, skipping publish."
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
