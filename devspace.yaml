@@ -36,7 +36,9 @@ deployments:
     helm:
       releaseName: test-runner
       chart:
-        name: ./charts/test-runner
+        git: https://github.com/atidyshirt/kubernetes-test-runner
+        subPath: charts/test-runner
+        branch: main
       values:
         image:
           repository: node
