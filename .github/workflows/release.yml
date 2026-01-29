@@ -9,27 +9,7 @@ on:
       - main
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: './packages/devspace-testing-nodejs/package-lock.json'
-
-      - name: Install and Build
-        working-directory: ./packages/devspace-testing-nodejs
-        run: |
-          npm ci
-          npm run build
-
   release:
-    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,12 +33,24 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      - name: Authenticate NPM
+        working-directory: ./packages/devspace-testing-nodejs
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
       - name: Run semantic-release
         uses: go-semantic-release/action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          custom-arguments: "--hooks npm"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           CWD: ./packages/devspace-testing-nodejs
+
+      - name: Publish to NPM
+        working-directory: ./packages/devspace-testing-nodejs
+        run: |
+          if [ -f .generated-go-semantic-release-changelog.md ]; then
+            npm publish --access public
+          else
+            echo "No new version detected, skipping publish."
+          fi
