@@ -50,8 +50,8 @@ jobs:
       - name: Publish to NPM
         working-directory: ./packages/devspace-testing-nodejs
         run: |
-          if [ -f .version ]; then
-            NEW_VERSION=$(cat .version)
+          if [ -f package.json ]; then
+            NEW_VERSION=$(cat package.json | jq .version)
             echo "New version detected: $NEW_VERSION"
 
             npm version $NEW_VERSION --no-git-tag-version
