@@ -1,0 +1,6 @@
+apiVersion: v2
+name: test-runner
+description: A Helm chart for running test workloads
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
