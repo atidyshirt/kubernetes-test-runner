@@ -10,6 +10,7 @@ on:
 
 jobs:
   release:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -42,6 +43,7 @@ jobs:
         uses: go-semantic-release/action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          custom-arguments: "--version-file"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CWD: ./packages/devspace-testing-nodejs
@@ -49,8 +51,14 @@ jobs:
       - name: Publish to NPM
         working-directory: ./packages/devspace-testing-nodejs
         run: |
-          if [ -f .generated-go-semantic-release-changelog.md ]; then
+          if [ -f .version ]; then
+            NEW_VERSION=$(cat .version)
+            echo "New version detected: $NEW_VERSION"
+
+            npm version $NEW_VERSION --no-git-tag-version
             npm publish --access public
           else
             echo "No new version detected, skipping publish."
           fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
