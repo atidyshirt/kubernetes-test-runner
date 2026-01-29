@@ -1,0 +1,6 @@
+replicaCount: 1
+
+image:
+  repository: node
+  tag: "24-alpine"
+  pullPolicy: IfNotPresent

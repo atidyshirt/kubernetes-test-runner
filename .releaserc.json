@@ -1,0 +1,12 @@
+{
+  "changelog": {
+    "path": "CHANGELOG.md"
+  },
+  "npm": {
+    "access": "public"
+  },
+  "plugins": [
+    "@go-semantic-release/semantic-release-plugin-npm",
+    "@go-semantic-release/semantic-release-plugin-github"
+  ]
+}

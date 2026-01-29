@@ -1,0 +1,34 @@
+{
+  "name": "@atidyshirt/node-devspace-testing",
+  "version": "0.0.0",
+  "description": "Testing utilities for DevSpace Kubernetes development",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "devspace",
+    "kubernetes",
+    "testing",
+    "kubectl"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.7.0",
+    "mongodb": "7.0.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,20 +1,2 @@
-# Go
-bin/
-*.exe
-*.test
-*.out
-
-# Node.js
-dist/
-node_modules/
-.devspace/
-npm-debug.log*
-.env
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Test artifacts
-testrunner-*/
-testrunner-*.log
+node_modules
+dist

@@ -1,0 +1,145 @@
+version: v2beta1
+
+# Variables that must be supplied per-project
+# vars:
+#   DEV_SCENARIO: "./manifests/overlays/dev"
+#   TEST_SCENARIO: "./manifests/overlays/test"
+#   IMAGE_UNDER_TEST: example-service
+#   IMAGE_UNDER_TEST_REPO: harbor.atlnz.lc/oneconnect/example-service
+#   DEV_COMMAND: "node --watch --experimental-strip-types src/index.ts"
+#   TEST_COMMAND: "yarn install && yarn test"
+#   ON_UPLOAD_COMMAND: "yarn install"
+
+name: ${IMAGE_UNDER_TEST}
+
+images:
+  app:
+    image: ${IMAGE_UNDER_TEST_REPO}
+    dockerfile: ./Dockerfile
+    context: ./
+
+deployments:
+  app:
+    kubectl:
+      kustomize: true
+      manifests:
+        - "${DEV_SCENARIO}"
+
+  test-scenario:
+    updateImageTags: true
+    kubectl:
+      kustomize: true
+      manifests:
+        - ${TEST_SCENARIO}
+
+  test-runner:
+    helm:
+      releaseName: test-runner
+      chart:
+        name: ./charts/test-runner
+      values:
+        image:
+          repository: node
+          tag: "24-alpine"
+
+dev:
+  app:
+    labelSelector:
+      app: ${IMAGE_UNDER_TEST}
+    devImage: node:24-alpine
+    workingDir: /opt/${IMAGE_UNDER_TEST}
+    command:
+      - sh
+      - -c
+      - ${DEV_COMMAND}
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 0.2
+        memory: 10Mi
+    logs:
+      enabled: true
+    sync:
+      - path: ./:/opt/${IMAGE_UNDER_TEST}
+        startContainer: true
+        disableDownload: true
+        waitInitialSync: true
+        initialSync: mirrorLocal
+        excludePaths:
+          - node_modules
+          - dist
+          - yarn.lock
+          - .git
+          - .devspace
+        onUpload:
+          restartContainer: true
+          exec:
+            - command: ${ON_UPLOAD_COMMAND}
+
+  test-runner:
+    labelSelector:
+      app: test-runner
+    devImage: node:24-alpine
+    workingDir: /opt/test-runner
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 0.2
+        memory: 10Mi
+    sync:
+      - path: ./:/opt/test-runner
+        disableDownload: true
+        waitInitialSync: true
+        initialSync: preferLocal
+        excludePaths:
+          - node_modules
+          - dist
+          - yarn.lock
+          - .git
+          - .devspace
+        onUpload:
+          exec:
+            - command: ${ON_UPLOAD_COMMAND}
+
+pipelines:
+  dev:
+    run: |
+      run_dependency_pipelines --all
+      create_deployments app
+      start_dev app
+
+  test:
+    run: |
+      run_dependency_pipelines --all
+      create_deployments test-scenario test-runner
+      start_dev app test-runner
+
+  ci:
+    run: |
+      run_dependency_pipelines --all
+      IMAGE_TAG=prod-$(date +%Y%m%d%H%M%S)
+      build_images app -t $IMAGE_TAG
+      create_deployments test-scenario test-runner
+      start_dev test-runner --set "sync[0].noWatch=true"
+      exec_container --label-selector=app=test-runner -- sh -c "${TEST_COMMAND}"
+      stop_dev --all
+
+commands:
+  test:
+    section: Tests
+    description: Run all unit and cluster tests
+    command: devspace enter -l app=test-runner -- npm test
+  watch:
+    section: Tests
+    description: Run all unit and cluster tests in watch mode
+    command: devspace enter -l app=test-runner -- npm test -- --watch
+  unit:
+    section: Tests
+    description: Run all unit tests
+    command: devspace enter -l app=test-runner -- npm test -- --grep '@unit'
+  cluster:
+    section: Tests
+    description: Run all cluster tests
+    command: devspace enter -l app=test-runner -- npm test -- --grep '@cluster'

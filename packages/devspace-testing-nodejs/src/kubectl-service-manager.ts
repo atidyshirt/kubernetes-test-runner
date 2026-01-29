@@ -5,8 +5,8 @@ const execAsync = promisify(exec);
 export class KubectlServiceManager {
     private namespace: string;
 
-    constructor(namespace: string) {
-        this.namespace = namespace;
+    constructor() {
+        this.namespace = process.env.NAMESPACE!;
     }
 
     async applyManifest(manifestPath: string): Promise<void> {

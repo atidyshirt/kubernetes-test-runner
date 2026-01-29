@@ -1,12 +1,6 @@
 export class WiremockService {
-    private namespace: string;
-
-    constructor(namespace: string) {
-        this.namespace = namespace;
-    }
-
     private adminMappingsUrl(serviceName: string): string {
-        return `http://${serviceName}.${this.namespace}.svc.cluster.local:8080/__admin/mappings`;
+        return `http://${serviceName}:3000/__admin/mappings`;
     }
 
     private async getAllMappings(serviceName: string) {
@@ -62,7 +56,7 @@ export class WiremockService {
     }
 
     async resetMappings(serviceName: string): Promise<void> {
-        const url = `http://${serviceName}.${this.namespace}.svc.cluster.local:8080/__admin/mappings/reset`;
+        const url = `http://${serviceName}:3000/__admin/mappings/reset`;
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -71,6 +65,27 @@ export class WiremockService {
             throw new Error(
                 `Failed to reset mappings for ${serviceName}: ${await response.text()}`,
             );
+        }
+    }
+
+    async getRequests(serviceName: string): Promise<any[]> {
+        const url = `http://${serviceName}:3000/__admin/requests`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to get requests: ${await response.text()}`);
+        }
+        const { requests } = (await response.json()) as any;
+        return requests;
+    }
+
+    async resetRequests(serviceName: string): Promise<void> {
+        const url = `http://${serviceName}:3000/__admin/requests/reset`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to reset requests: ${await response.text()}`);
         }
     }
 }

@@ -1,18 +1,13 @@
 import { KubectlServiceManager } from './kubectl-service-manager.ts';
-import { MongoService } from './mongo-service.ts';
 import { WiremockService } from './wiremock-service.ts';
 
 export class TestContainer {
     readonly kubectl: KubectlServiceManager;
-    private mongoService: MongoService;
     private wiremockService: WiremockService;
 
-    constructor(namespace: string) {
-        this.kubectl = new KubectlServiceManager(namespace);
-        this.mongoService = new MongoService(
-            `mongodb://mongodb.${namespace}.svc.cluster.local:27017`,
-        );
-        this.wiremockService = new WiremockService(namespace);
+    constructor() {
+        this.kubectl = new KubectlServiceManager();
+        this.wiremockService = new WiremockService();
     }
 
     async countStringInWorkloadLogs(workload: string, search: string): Promise<number> {
@@ -27,10 +22,6 @@ export class TestContainer {
         return this.kubectl.waitForWorkloadLogCount(workload, search, target);
     }
 
-    getDb() {
-        return this.mongoService.getDb();
-    }
-
     async updateMapping(
         serviceName: string,
         endpoint: string,
@@ -38,5 +29,17 @@ export class TestContainer {
         jsonBody: object,
     ): Promise<void> {
         await this.wiremockService.updateMapping(serviceName, endpoint, method, jsonBody);
+    }
+
+    async resetMappings(serviceName: string): Promise<void> {
+        await this.wiremockService.resetMappings(serviceName);
+    }
+
+    async getRequests(serviceName: string): Promise<any[]> {
+        return this.wiremockService.getRequests(serviceName);
+    }
+
+    async resetRequests(serviceName: string): Promise<void> {
+        await this.wiremockService.resetRequests(serviceName);
     }
 }
