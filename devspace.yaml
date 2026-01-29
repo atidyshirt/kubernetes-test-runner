@@ -9,6 +9,8 @@ version: v2beta1
 #   DEV_COMMAND: "node --watch --experimental-strip-types src/index.ts"
 #   TEST_COMMAND: "yarn install && yarn test"
 #   ON_UPLOAD_COMMAND: "yarn install"
+#   TEST_RUNNER_IMAGE: "node"
+#   TEST_RUNNER_IMAGE_TAG: "24-alpine"
 
 name: ${IMAGE_UNDER_TEST}
 
@@ -41,8 +43,8 @@ deployments:
         branch: main
       values:
         image:
-          repository: node
-          tag: "24-alpine"
+          repository: ${TEST_RUNNER_IMAGE}
+          tag: ${TEST_RUNNER_IMAGE_TAG}
 
 dev:
   app:

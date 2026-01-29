@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "description": "Testing utilities for DevSpace Kubernetes development",
   "type": "module",
-  "main": "./dist/index.js",
-  "exports": "./dist/index.js",
+  "main": "./dist/index.ts",
+  "exports": "./dist/index.ts",
   "types": "./dist/index.d.ts",
   "publishConfig": {
     "access": "public"
